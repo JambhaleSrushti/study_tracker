@@ -180,6 +180,34 @@ def view_study_streak():
 
     print(f"Current streak: {streak} days")
 
+def filter_sessions_by_subject():
+    print("\n===== FILTER BY SUBJECT =====")
+
+    if not study_sessions:
+        print("No study sessions added yet.")
+        return
+
+    subject_to_find = input("Enter subject: ").strip().title()
+
+    matching_sessions = []
+
+    for session in study_sessions:
+        if session["subject"] == subject_to_find:
+            matching_sessions.append(session)
+
+    if not matching_sessions:
+        print(f"No study sessions found for {subject_to_find}.")
+        return
+
+    for index, session in enumerate(matching_sessions, start=1):
+        print(
+            f"{index}. "
+            f"{session['date']} - "
+            f"{session['subject']} - "
+            f"{session['topic']} - "
+            f"{session['duration']} minutes"
+        )
+
 def main():
     while True:
         print("1. Add study session")
@@ -189,7 +217,8 @@ def main():
         print("5. View study time by subject")
         print("6. View daily goal progress")
         print("7. View study streak")
-        print("8. Exit")
+        print("8. Filter sessions by subject")
+        print("9. Exit")
 
         choice = input("\nChoose an option: ")
 
@@ -215,10 +244,13 @@ def main():
             view_study_streak()
 
         elif choice == "8":
+            filter_sessions_by_subject()
+
+        elif choice == "9":
             print("\nGoodbye!")
             break      
 
         else:
-            print("\nInvalid option. Please choose 1, 2, 3, 4, 5, 6, 7, and 8.")
+            print("\nInvalid option. Please choose 1 to 9.")
 
 main()
