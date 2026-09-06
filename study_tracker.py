@@ -6,7 +6,7 @@ study_sessions = []
 def add_study_session():
     print("\n===== ADD STUDY SESSION =====")
 
-    subject = input("Subject: ").strip()
+    subject = input("Subject: ").strip().title()
     topic = input("Topic: ").strip()
     while True:
         duration = input("Duration (minutes): ")
