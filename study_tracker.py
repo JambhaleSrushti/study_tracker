@@ -1,3 +1,5 @@
+from datetime import date
+
 study_sessions = []
 
 
@@ -15,7 +17,10 @@ def add_study_session():
 
     print("Please enter a valid duration in minutes.")
 
+    session_date = date.today().isoformat()
+
     session = {
+        "date": session_date,
         "subject": subject,
         "topic": topic,
         "duration": duration
@@ -36,6 +41,7 @@ def view_study_sessions():
     for index, session in enumerate(study_sessions, start=1):
         print(
             f"{index}. "
+            f"{session['date']} - "
             f"{session['subject']} - "
             f"{session['topic']} - "
             f"{session['duration']} minutes"
