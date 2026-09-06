@@ -58,6 +58,26 @@ def initialize_database():
     connection.commit()
     connection.close()
 
+def save_session_to_database(session):
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        INSERT INTO study_sessions (date, subject, topic, duration)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            session["date"],
+            session["subject"],
+            session["topic"],
+            session["duration"]
+        )
+    )
+
+    connection.commit()
+    connection.close()
+
 def add_study_session():
     print("\n===== ADD STUDY SESSION =====")
 
@@ -83,6 +103,7 @@ def add_study_session():
 
     study_sessions.append(session)
     save_sessions()
+    save_session_to_database(session)
 
     print("\nStudy session added successfully!")
 
