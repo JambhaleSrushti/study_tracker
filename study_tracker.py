@@ -78,6 +78,22 @@ def save_session_to_database(session):
     connection.commit()
     connection.close()
 
+def load_sessions_from_database():
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT id, date, subject, topic, duration
+        FROM study_sessions
+        ORDER BY id
+    """)
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    return rows
+
 def add_study_session():
     print("\n===== ADD STUDY SESSION =====")
 
@@ -518,6 +534,24 @@ def set_daily_goal():
             return
 
         print("Please enter a valid number of minutes.")
+
+def view_database_sessions():
+    print("\n===== SQLITE STUDY SESSIONS =====")
+
+    sessions = load_sessions_from_database()
+
+    if not sessions:
+        print("No study sessions found in the database.")
+        return
+
+    for session in sessions:
+        print(
+            f"{session[0]}. "
+            f"{session[1]} - "
+            f"{session[2]} - "
+            f"{session[3]} - "
+            f"{session[4]} minutes"
+        )
 
 def main():
     while True:
