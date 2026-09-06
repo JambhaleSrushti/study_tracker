@@ -2,7 +2,7 @@ import json
 from datetime import date
 
 DATA_FILE = "study_sessions.json"
-
+DAILY_GOAL_MINUTES = 120
 
 def load_sessions():
     try:
@@ -127,6 +127,27 @@ def view_study_time_by_subject():
     for subject, total in subject_totals.items():
         print(f"{subject}: {total} minutes")
         
+def view_daily_goal_progress():
+    print("\n===== DAILY STUDY GOAL =====")
+
+    today = date.today().isoformat()
+    today_minutes = 0
+
+    for session in study_sessions:
+        if session["date"] == today:
+            today_minutes += session["duration"]
+
+    progress = (today_minutes / DAILY_GOAL_MINUTES) * 100
+
+    print(f"Daily goal: {DAILY_GOAL_MINUTES} minutes")
+    print(f"Today's study: {today_minutes} minutes")
+    print(f"Progress: {progress:.0f}%")
+
+    if today_minutes >= DAILY_GOAL_MINUTES:
+        print("Daily goal completed!")
+    else:
+        remaining = DAILY_GOAL_MINUTES - today_minutes
+        print(f"{remaining} minutes remaining.")
 
 def main():
     while True:
@@ -135,7 +156,8 @@ def main():
         print("3. Delete study session")
         print("4. View total study time")
         print("5. View study time by subject")
-        print("6. Exit")
+        print("6. View daily goal progress")
+        print("7. Exit")
 
         choice = input("\nChoose an option: ")
 
@@ -155,10 +177,13 @@ def main():
             view_study_time_by_subject()
 
         elif choice == "6":
+            view_daily_goal_progress()
+
+        elif choice == "7":
             print("\nGoodbye!")
             break      
 
         else:
-            print("\nInvalid option. Please choose 1, 2, 3, 4, 5, or 6.")
+            print("\nInvalid option. Please choose 1, 2, 3, 4, 5, 6, and 7.")
 
 main()
