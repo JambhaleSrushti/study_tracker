@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, timedelta
 
 DATA_FILE = "study_sessions.json"
 DAILY_GOAL_MINUTES = 120
@@ -149,6 +149,37 @@ def view_daily_goal_progress():
         remaining = DAILY_GOAL_MINUTES - today_minutes
         print(f"{remaining} minutes remaining.")
 
+def view_study_streak():
+    print("\n===== STUDY STREAK =====")
+
+    if not study_sessions:
+        print("Current streak: 0 days")
+        return
+
+    study_dates = set()
+
+    for session in study_sessions:
+        study_dates.add(session["date"])
+
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+
+    if today.isoformat() in study_dates:
+        current_date = today
+    elif yesterday.isoformat() in study_dates:
+        current_date = yesterday
+    else:
+        print("Current streak: 0 days")
+        return
+
+    streak = 0
+
+    while current_date.isoformat() in study_dates:
+        streak += 1
+        current_date -= timedelta(days=1)
+
+    print(f"Current streak: {streak} days")
+
 def main():
     while True:
         print("1. Add study session")
@@ -157,7 +188,8 @@ def main():
         print("4. View total study time")
         print("5. View study time by subject")
         print("6. View daily goal progress")
-        print("7. Exit")
+        print("7. View study streak")
+        print("8. Exit")
 
         choice = input("\nChoose an option: ")
 
@@ -180,10 +212,13 @@ def main():
             view_daily_goal_progress()
 
         elif choice == "7":
+            view_study_streak()
+
+        elif choice == "8":
             print("\nGoodbye!")
             break      
 
         else:
-            print("\nInvalid option. Please choose 1, 2, 3, 4, 5, 6, and 7.")
+            print("\nInvalid option. Please choose 1, 2, 3, 4, 5, 6, 7, and 8.")
 
 main()
