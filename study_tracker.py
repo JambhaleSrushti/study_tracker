@@ -93,6 +93,38 @@ def load_sessions_from_database():
     connection.close()
 
     return rows
+def migrate_json_to_database():
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM study_sessions")
+    database_session_count = cursor.fetchone()[0]
+
+    if database_session_count > 0:
+        connection.close()
+        return
+
+    for session in study_sessions:
+        cursor.execute(
+            """
+            INSERT INTO study_sessions (date, subject, topic, duration)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                session["date"],
+                session["subject"],
+                session["topic"],
+                session["duration"]
+            )
+        )
+
+    connection.commit()
+    connection.close()
+
+    print(
+        f"Migrated {len(study_sessions)} study sessions "
+        f"from JSON to SQLite."
+    )
 
 def add_study_session():
     print("\n===== ADD STUDY SESSION =====")
@@ -627,4 +659,5 @@ def main():
             print("\nInvalid option. Please choose 1 to 16.")
 
 initialize_database()
+migrate_json_to_database()
 main()
