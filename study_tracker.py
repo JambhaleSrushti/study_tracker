@@ -159,19 +159,21 @@ def add_study_session():
 def view_study_sessions():
     print("\n===== STUDY SESSIONS =====")
 
-    if not study_sessions:
+    sessions = load_sessions_from_database()
+
+    if not sessions:
         print("No study sessions added yet.")
         return
 
-    for index, session in enumerate(study_sessions, start=1):
+    for index, session in enumerate(sessions, start=1):
         print(
             f"{index}. "
-            f"{session['date']} - "
-            f"{session['subject']} - "
-            f"{session['topic']} - "
-            f"{session['duration']} minutes"
+            f"{session[1]} - "
+            f"{session[2]} - "
+            f"{session[3]} - "
+            f"{session[4]} minutes"
         )
-
+        
 def delete_study_session():
     print("\n===== DELETE STUDY SESSION =====")
 
