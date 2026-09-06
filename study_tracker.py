@@ -304,6 +304,38 @@ def search_sessions_by_topic():
             f"{session['duration']} minutes"
         )
 
+def view_weekly_statistics():
+    print("\n===== WEEKLY STATISTICS =====")
+
+    today = date.today()
+
+    # Find Monday of the current week
+    week_start = today - timedelta(days=today.weekday())
+
+    weekly_sessions = []
+
+    for session in study_sessions:
+        session_date = date.fromisoformat(session["date"])
+
+        if week_start <= session_date <= today:
+            weekly_sessions.append(session)
+
+    if not weekly_sessions:
+        print("No study sessions found for this week.")
+        return
+
+    total_minutes = 0
+    study_days = set()
+
+    for session in weekly_sessions:
+        total_minutes += session["duration"]
+        study_days.add(session["date"])
+
+    print(f"Week: {week_start} to {today}")
+    print(f"Study sessions: {len(weekly_sessions)}")
+    print(f"Study days: {len(study_days)}")
+    print(f"Total study time: {total_minutes} minutes")
+
 def main():
     while True:
         print("1. Add study session")
@@ -317,7 +349,8 @@ def main():
         print("9. Filter sessions by date")
         print("10. Sort study sessions")
         print("11. Search sessions by topic")
-        print("12. Exit")
+        print("12. View weekly statistics")
+        print("13. Exit")
 
         choice = input("\nChoose an option: ")
 
@@ -355,10 +388,13 @@ def main():
             search_sessions_by_topic()
 
         elif choice == "12":
+            view_weekly_statistics()
+
+        elif choice == "13":
             print("\nGoodbye!")
             break      
 
         else:
-            print("\nInvalid option. Please choose 1 to 12.")
+            print("\nInvalid option. Please choose 1 to 13.")
 
 main()
