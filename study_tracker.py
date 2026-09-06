@@ -6,8 +6,8 @@ study_sessions = []
 def add_study_session():
     print("\n===== ADD STUDY SESSION =====")
 
-    subject = input("Subject: ")
-    topic = input("Topic: ")
+    subject = input("Subject: ").strip()
+    topic = input("Topic: ").strip()
     while True:
         duration = input("Duration (minutes): ")
 
@@ -89,13 +89,36 @@ def view_total_study_time():
 
     print(f"Total study time: {total_minutes} minutes")
 
+def view_study_time_by_subject():
+    print("\n===== STUDY TIME BY SUBJECT =====")
+
+    if not study_sessions:
+        print("No study sessions added yet.")
+        return
+
+    subject_totals = {}
+
+    for session in study_sessions:
+        subject = session["subject"]
+        duration = session["duration"]
+
+        if subject in subject_totals:
+            subject_totals[subject] += duration
+        else:
+            subject_totals[subject] = duration
+
+    for subject, total in subject_totals.items():
+        print(f"{subject}: {total} minutes")
+        
+
 def main():
     while True:
         print("1. Add study session")
         print("2. View study sessions")
         print("3. Delete study session")
         print("4. View total study time")
-        print("5. Exit")
+        print("5. View study time by subject")
+        print("6. Exit")
 
         choice = input("\nChoose an option: ")
 
@@ -112,10 +135,13 @@ def main():
             view_total_study_time()
 
         elif choice == "5":
+            view_study_time_by_subject()
+
+        elif choice == "6":
             print("\nGoodbye!")
-            break
+            break      
 
         else:
-            print("\nInvalid option. Please choose 1, 2, 3, 4, or 5.")
+            print("\nInvalid option. Please choose 1, 2, 3, 4, 5, or 6.")
 
 main()
