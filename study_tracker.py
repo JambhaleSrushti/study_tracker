@@ -208,6 +208,34 @@ def filter_sessions_by_subject():
             f"{session['duration']} minutes"
         )
 
+def filter_sessions_by_date():
+    print("\n===== FILTER BY DATE =====")
+
+    if not study_sessions:
+        print("No study sessions added yet.")
+        return
+
+    date_to_find = input("Enter date (YYYY-MM-DD): ").strip()
+
+    matching_sessions = []
+
+    for session in study_sessions:
+        if session["date"] == date_to_find:
+            matching_sessions.append(session)
+
+    if not matching_sessions:
+        print(f"No study sessions found for {date_to_find}.")
+        return
+
+    for index, session in enumerate(matching_sessions, start=1):
+        print(
+            f"{index}. "
+            f"{session['date']} - "
+            f"{session['subject']} - "
+            f"{session['topic']} - "
+            f"{session['duration']} minutes"
+        )
+
 def main():
     while True:
         print("1. Add study session")
@@ -218,7 +246,8 @@ def main():
         print("6. View daily goal progress")
         print("7. View study streak")
         print("8. Filter sessions by subject")
-        print("9. Exit")
+        print("9. Filter sessions by date")
+        print("10. Exit")
 
         choice = input("\nChoose an option: ")
 
@@ -247,10 +276,13 @@ def main():
             filter_sessions_by_subject()
 
         elif choice == "9":
+            filter_sessions_by_date()
+
+        elif choice == "10":
             print("\nGoodbye!")
             break      
 
         else:
-            print("\nInvalid option. Please choose 1 to 9.")
+            print("\nInvalid option. Please choose 1 to 10.")
 
 main()
