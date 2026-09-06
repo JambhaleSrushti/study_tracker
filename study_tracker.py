@@ -336,6 +336,38 @@ def view_weekly_statistics():
     print(f"Study days: {len(study_days)}")
     print(f"Total study time: {total_minutes} minutes")
 
+def view_monthly_statistics():
+    print("\n===== MONTHLY STATISTICS =====")
+
+    today = date.today()
+
+    monthly_sessions = []
+
+    for session in study_sessions:
+        session_date = date.fromisoformat(session["date"])
+
+        if (
+            session_date.year == today.year
+            and session_date.month == today.month
+        ):
+            monthly_sessions.append(session)
+
+    if not monthly_sessions:
+        print("No study sessions found for this month.")
+        return
+
+    total_minutes = 0
+    study_days = set()
+
+    for session in monthly_sessions:
+        total_minutes += session["duration"]
+        study_days.add(session["date"])
+
+    print(f"Month: {today.strftime('%B %Y')}")
+    print(f"Study sessions: {len(monthly_sessions)}")
+    print(f"Study days: {len(study_days)}")
+    print(f"Total study time: {total_minutes} minutes")
+
 def main():
     while True:
         print("1. Add study session")
@@ -350,7 +382,8 @@ def main():
         print("10. Sort study sessions")
         print("11. Search sessions by topic")
         print("12. View weekly statistics")
-        print("13. Exit")
+        print("13. View monthly statistics")
+        print("14. Exit")
 
         choice = input("\nChoose an option: ")
 
@@ -391,10 +424,13 @@ def main():
             view_weekly_statistics()
 
         elif choice == "13":
+            view_monthly_statistics()
+
+        elif choice == "14":
             print("\nGoodbye!")
             break      
 
         else:
-            print("\nInvalid option. Please choose 1 to 13.")
+            print("\nInvalid option. Please choose 1 to 14.")
 
 main()
