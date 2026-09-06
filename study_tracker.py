@@ -236,6 +236,46 @@ def filter_sessions_by_date():
             f"{session['duration']} minutes"
         )
 
+def view_sorted_sessions():
+    print("\n===== SORT STUDY SESSIONS =====")
+
+    if not study_sessions:
+        print("No study sessions added yet.")
+        return
+
+    print("1. Oldest first")
+    print("2. Newest first")
+
+    choice = input("Choose sort order: ")
+
+    if choice == "1":
+        sorted_sessions = sorted(
+            study_sessions,
+            key=lambda session: session["date"]
+        )
+
+    elif choice == "2":
+        sorted_sessions = sorted(
+            study_sessions,
+            key=lambda session: session["date"],
+            reverse=True
+        )
+
+    else:
+        print("Invalid option.")
+        return
+
+    print("\n===== SORTED STUDY SESSIONS =====")
+
+    for index, session in enumerate(sorted_sessions, start=1):
+        print(
+            f"{index}. "
+            f"{session['date']} - "
+            f"{session['subject']} - "
+            f"{session['topic']} - "
+            f"{session['duration']} minutes"
+        )
+
 def main():
     while True:
         print("1. Add study session")
@@ -247,7 +287,8 @@ def main():
         print("7. View study streak")
         print("8. Filter sessions by subject")
         print("9. Filter sessions by date")
-        print("10. Exit")
+        print("10. Sort study sessions")
+        print("11. Exit")
 
         choice = input("\nChoose an option: ")
 
@@ -279,10 +320,13 @@ def main():
             filter_sessions_by_date()
 
         elif choice == "10":
+            view_sorted_sessions()
+
+        elif choice == "11":
             print("\nGoodbye!")
             break      
 
         else:
-            print("\nInvalid option. Please choose 1 to 10.")
+            print("\nInvalid option. Please choose 1 to 11.")
 
 main()
