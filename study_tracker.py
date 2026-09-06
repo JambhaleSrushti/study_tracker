@@ -1,7 +1,22 @@
+import json
 from datetime import date
 
-study_sessions = []
+DATA_FILE = "study_sessions.json"
 
+
+def load_sessions():
+    try:
+        with open(DATA_FILE, "r") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return []
+
+
+study_sessions = load_sessions()
+
+def save_sessions():
+    with open(DATA_FILE, "w") as file:
+        json.dump(study_sessions, file, indent=4)
 
 def add_study_session():
     print("\n===== ADD STUDY SESSION =====")
@@ -15,7 +30,7 @@ def add_study_session():
             duration = int(duration)
             break
 
-    print("Please enter a valid duration in minutes.")
+        print("Please enter a valid duration in minutes.")
 
     session_date = date.today().isoformat()
 
@@ -27,6 +42,7 @@ def add_study_session():
     }
 
     study_sessions.append(session)
+    save_sessions()
 
     print("\nStudy session added successfully!")
 
@@ -69,6 +85,7 @@ def delete_study_session():
         return
 
     deleted_session = study_sessions.pop(session_number - 1)
+    save_sessions()
 
     print(
         f"\nDeleted: {deleted_session['subject']} - "
