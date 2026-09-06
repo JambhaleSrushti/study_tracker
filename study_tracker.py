@@ -1,8 +1,10 @@
+import sqlite3
 import json
 from datetime import date, timedelta
 
 DATA_FILE = "study_sessions.json"
 SETTINGS_FILE = "settings.json"
+DB_FILE = "study_tracker.db"
 
 def load_daily_goal():
     try:
@@ -37,6 +39,24 @@ study_sessions = load_sessions()
 def save_sessions():
     with open(DATA_FILE, "w") as file:
         json.dump(study_sessions, file, indent=4)
+
+def initialize_database():
+    connection = sqlite3.connect(DB_FILE)
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS study_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            topic TEXT NOT NULL,
+            duration INTEGER NOT NULL
+        )
+    """)
+
+    connection.commit()
+    connection.close()
 
 def add_study_session():
     print("\n===== ADD STUDY SESSION =====")
@@ -551,4 +571,5 @@ def main():
         else:
             print("\nInvalid option. Please choose 1 to 16.")
 
+initialize_database()
 main()
