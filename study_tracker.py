@@ -24,7 +24,7 @@ def add_study_session():
     subject = input("Subject: ").strip().title()
     topic = input("Topic: ").strip()
     while True:
-        duration = input("Duration (minutes): ")
+        duration = input("Duration (minutes): ").strip()
 
         if duration.isdigit() and int(duration) > 0:
             duration = int(duration)
@@ -72,7 +72,7 @@ def delete_study_session():
 
     view_study_sessions()
 
-    session_number = input("\nEnter session number to delete: ")
+    session_number = input("\nEnter session number to delete: ").strip()
 
     if not session_number.isdigit():
         print("Please enter a valid number.")
@@ -246,7 +246,7 @@ def view_sorted_sessions():
     print("1. Oldest first")
     print("2. Newest first")
 
-    choice = input("Choose sort order: ")
+    choice = input("Choose sort order: ").strip()
 
     if choice == "1":
         sorted_sessions = sorted(
@@ -377,7 +377,7 @@ def edit_study_session():
 
     view_study_sessions()
 
-    session_number = input("\nEnter session number to edit: ")
+    session_number = input("\nEnter session number to edit: ").strip()
 
     if not session_number.isdigit():
         print("Please enter a valid session number.")
@@ -452,7 +452,7 @@ def main():
         print("14. Edit study session")
         print("15. Exit")
 
-        choice = input("\nChoose an option: ")
+        choice = input("\nChoose an option: ").strip()
 
         if choice == "1":
             add_study_session()
