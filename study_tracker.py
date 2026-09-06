@@ -368,6 +368,72 @@ def view_monthly_statistics():
     print(f"Study days: {len(study_days)}")
     print(f"Total study time: {total_minutes} minutes")
 
+def edit_study_session():
+    print("\n===== EDIT STUDY SESSION =====")
+
+    if not study_sessions:
+        print("No study sessions to edit.")
+        return
+
+    view_study_sessions()
+
+    session_number = input("\nEnter session number to edit: ")
+
+    if not session_number.isdigit():
+        print("Please enter a valid session number.")
+        return
+
+    session_number = int(session_number)
+
+    if session_number < 1 or session_number > len(study_sessions):
+        print("Session not found.")
+        return
+
+    session = study_sessions[session_number - 1]
+
+    print("\nWhat would you like to edit?")
+    print("1. Subject")
+    print("2. Topic")
+    print("3. Duration")
+
+    choice = input("Choose an option: ")
+
+    if choice == "1":
+        new_subject = input("Enter new subject: ").strip().title()
+
+        if not new_subject:
+            print("Subject cannot be empty.")
+            return
+
+        session["subject"] = new_subject
+
+    elif choice == "2":
+        new_topic = input("Enter new topic: ").strip()
+
+        if not new_topic:
+            print("Topic cannot be empty.")
+            return
+
+        session["topic"] = new_topic
+
+    elif choice == "3":
+        while True:
+            new_duration = input("Enter new duration (minutes): ")
+
+            if new_duration.isdigit() and int(new_duration) > 0:
+                session["duration"] = int(new_duration)
+                break
+
+            print("Please enter a valid duration in minutes.")
+
+    else:
+        print("Invalid option.")
+        return
+
+    save_sessions()
+
+    print("\nStudy session updated successfully!")
+
 def main():
     while True:
         print("1. Add study session")
@@ -383,7 +449,8 @@ def main():
         print("11. Search sessions by topic")
         print("12. View weekly statistics")
         print("13. View monthly statistics")
-        print("14. Exit")
+        print("14. Edit study session")
+        print("15. Exit")
 
         choice = input("\nChoose an option: ")
 
@@ -427,10 +494,13 @@ def main():
             view_monthly_statistics()
 
         elif choice == "14":
+            edit_study_session()
+
+        elif choice == "15":
             print("\nGoodbye!")
             break      
 
         else:
-            print("\nInvalid option. Please choose 1 to 14.")
+            print("\nInvalid option. Please choose 1 to 15.")
 
 main()
