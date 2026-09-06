@@ -2,7 +2,27 @@ import json
 from datetime import date, timedelta
 
 DATA_FILE = "study_sessions.json"
-DAILY_GOAL_MINUTES = 120
+SETTINGS_FILE = "settings.json"
+
+def load_daily_goal():
+    try:
+        with open(SETTINGS_FILE, "r") as file:
+            settings = json.load(file)
+            return settings.get("daily_goal_minutes")
+    except FileNotFoundError:
+        return None
+
+
+def save_daily_goal(goal):
+    settings = {
+        "daily_goal_minutes": goal
+    }
+
+    with open(SETTINGS_FILE, "w") as file:
+        json.dump(settings, file, indent=4)
+
+
+daily_goal_minutes = load_daily_goal()
 
 def load_sessions():
     try:
@@ -130,6 +150,10 @@ def view_study_time_by_subject():
 def view_daily_goal_progress():
     print("\n===== DAILY STUDY GOAL =====")
 
+    if daily_goal_minutes is None:
+        print("Daily study goal has not been set yet.")
+        return
+
     today = date.today().isoformat()
     today_minutes = 0
 
@@ -137,16 +161,16 @@ def view_daily_goal_progress():
         if session["date"] == today:
             today_minutes += session["duration"]
 
-    progress = (today_minutes / DAILY_GOAL_MINUTES) * 100
+    progress = (today_minutes / daily_goal_minutes) * 100
 
-    print(f"Daily goal: {DAILY_GOAL_MINUTES} minutes")
+    print(f"Daily goal: {daily_goal_minutes} minutes")
     print(f"Today's study: {today_minutes} minutes")
     print(f"Progress: {progress:.0f}%")
 
-    if today_minutes >= DAILY_GOAL_MINUTES:
+    if today_minutes >= daily_goal_minutes:
         print("Daily goal completed!")
     else:
-        remaining = DAILY_GOAL_MINUTES - today_minutes
+        remaining = daily_goal_minutes - today_minutes
         print(f"{remaining} minutes remaining.")
 
 def view_study_streak():
@@ -434,6 +458,26 @@ def edit_study_session():
 
     print("\nStudy session updated successfully!")
 
+def set_daily_goal():
+    global daily_goal_minutes
+
+    print("\n===== SET DAILY STUDY GOAL =====")
+
+    while True:
+        goal = input("Enter daily goal in minutes: ").strip()
+
+        if goal.isdigit() and int(goal) > 0:
+            daily_goal_minutes = int(goal)
+            save_daily_goal(daily_goal_minutes)
+
+            print(
+                f"\nDaily study goal set to "
+                f"{daily_goal_minutes} minutes."
+            )
+            return
+
+        print("Please enter a valid number of minutes.")
+
 def main():
     while True:
         print("1. Add study session")
@@ -450,7 +494,8 @@ def main():
         print("12. View weekly statistics")
         print("13. View monthly statistics")
         print("14. Edit study session")
-        print("15. Exit")
+        print("15. Set daily study goal")
+        print("16. Exit")
 
         choice = input("\nChoose an option: ").strip()
 
@@ -497,10 +542,13 @@ def main():
             edit_study_session()
 
         elif choice == "15":
+            set_daily_goal()
+
+        elif choice == "16":
             print("\nGoodbye!")
             break      
 
         else:
-            print("\nInvalid option. Please choose 1 to 15.")
+            print("\nInvalid option. Please choose 1 to 16.")
 
 main()
