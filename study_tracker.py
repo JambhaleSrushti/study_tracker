@@ -276,6 +276,34 @@ def view_sorted_sessions():
             f"{session['duration']} minutes"
         )
 
+def search_sessions_by_topic():
+    print("\n===== SEARCH BY TOPIC =====")
+
+    if not study_sessions:
+        print("No study sessions added yet.")
+        return
+
+    topic_to_find = input("Enter topic keyword: ").strip().lower()
+
+    matching_sessions = []
+
+    for session in study_sessions:
+        if topic_to_find in session["topic"].lower():
+            matching_sessions.append(session)
+
+    if not matching_sessions:
+        print(f"No study sessions found matching '{topic_to_find}'.")
+        return
+
+    for index, session in enumerate(matching_sessions, start=1):
+        print(
+            f"{index}. "
+            f"{session['date']} - "
+            f"{session['subject']} - "
+            f"{session['topic']} - "
+            f"{session['duration']} minutes"
+        )
+
 def main():
     while True:
         print("1. Add study session")
@@ -288,7 +316,8 @@ def main():
         print("8. Filter sessions by subject")
         print("9. Filter sessions by date")
         print("10. Sort study sessions")
-        print("11. Exit")
+        print("11. Search sessions by topic")
+        print("12. Exit")
 
         choice = input("\nChoose an option: ")
 
@@ -323,10 +352,13 @@ def main():
             view_sorted_sessions()
 
         elif choice == "11":
+            search_sessions_by_topic()
+
+        elif choice == "12":
             print("\nGoodbye!")
             break      
 
         else:
-            print("\nInvalid option. Please choose 1 to 11.")
+            print("\nInvalid option. Please choose 1 to 12.")
 
 main()
