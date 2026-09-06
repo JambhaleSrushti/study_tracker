@@ -6,7 +6,14 @@ def add_study_session():
 
     subject = input("Subject: ")
     topic = input("Topic: ")
-    duration = int(input("Duration (minutes): "))
+    while True:
+        duration = input("Duration (minutes): ")
+
+        if duration.isdigit() and int(duration) > 0:
+            duration = int(duration)
+            break
+
+    print("Please enter a valid duration in minutes.")
 
     session = {
         "subject": subject,
