@@ -93,6 +93,24 @@ def load_sessions_from_database():
     connection.close()
 
     return rows
+
+def sync_json_from_database():
+    global study_sessions
+
+    database_sessions = load_sessions_from_database()
+
+    study_sessions = []
+
+    for session in database_sessions:
+        study_sessions.append({
+            "date": session[1],
+            "subject": session[2],
+            "topic": session[3],
+            "duration": session[4]
+        })
+
+    save_sessions()
+
 def migrate_json_to_database():
     connection = sqlite3.connect(DB_FILE)
     cursor = connection.cursor()
@@ -174,34 +192,56 @@ def view_study_sessions():
             f"{session[4]} minutes"
         )
         
+
 def delete_study_session():
     print("\n===== DELETE STUDY SESSION =====")
 
-    if not study_sessions:
+    sessions = load_sessions_from_database()
+
+    if not sessions:
         print("No study sessions to delete.")
         return
 
-    view_study_sessions()
+    for index, session in enumerate(sessions, start=1):
+        print(
+            f"{index}. "
+            f"{session[1]} - "
+            f"{session[2]} - "
+            f"{session[3]} - "
+            f"{session[4]} minutes"
+        )
 
-    session_number = input("\nEnter session number to delete: ").strip()
+    session_number = input(
+        "\nEnter session number to delete: "
+    ).strip()
 
     if not session_number.isdigit():
-        print("Please enter a valid number.")
+        print("Please enter a valid session number.")
         return
 
     session_number = int(session_number)
 
-    if session_number < 1 or session_number > len(study_sessions):
+    if session_number < 1 or session_number > len(sessions):
         print("Session not found.")
         return
 
-    deleted_session = study_sessions.pop(session_number - 1)
-    save_sessions()
+    selected_session = sessions[session_number - 1]
+    session_id = selected_session[0]
 
-    print(
-        f"\nDeleted: {deleted_session['subject']} - "
-        f"{deleted_session['topic']}"
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "DELETE FROM study_sessions WHERE id = ?",
+        (session_id,)
     )
+
+    connection.commit()
+    connection.close()
+
+    sync_json_from_database()
+
+    print("\nStudy session deleted successfully!")    
 
 def view_total_study_time():
     print("\n===== TOTAL STUDY TIME =====")
