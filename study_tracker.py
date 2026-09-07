@@ -814,6 +814,26 @@ def get_sessions_by_subject(subject):
 
     return sessions
 
+def get_sessions_by_topic(keyword):
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT id, date, subject, topic, duration
+        FROM study_sessions
+        WHERE topic LIKE ?
+        ORDER BY date
+        """,
+        (f"%{keyword}%",)
+    )
+
+    sessions = cursor.fetchall()
+
+    connection.close()
+
+    return sessions
+
 def main():
     while True:
         print("1. Add study session")

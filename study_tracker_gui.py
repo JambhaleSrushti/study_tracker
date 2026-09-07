@@ -11,7 +11,8 @@ from study_tracker import (
     load_daily_goal_from_database,
     save_daily_goal_to_database,
     get_today_study_minutes,
-    get_sessions_by_subject
+    get_sessions_by_subject,
+    get_sessions_by_topic
 )
 
 
@@ -302,11 +303,25 @@ def filter_by_subject():
     refresh_session_table(sessions)
 
 
-def clear_subject_filter():
+def clear_filters():
     filter_subject_entry.delete(0, tk.END)
+    filter_topic_entry.delete(0, tk.END)
 
     refresh_session_table()
 
+def search_by_topic():
+    keyword = filter_topic_entry.get().strip()
+
+    if not keyword:
+        messagebox.showwarning(
+            "Missing Topic",
+            "Please enter a topic to search."
+        )
+        return
+
+    sessions = get_sessions_by_topic(keyword)
+
+    refresh_session_table(sessions)
 
 # =========================================================
 # DATABASE INITIALIZATION
@@ -576,6 +591,43 @@ ttk.Label(
     pady=10
 )
 
+ttk.Label(
+    filter_frame,
+    text="Topic:"
+).grid(
+    row=1,
+    column=0,
+    padx=10,
+    pady=10
+)
+
+
+filter_topic_entry = ttk.Entry(
+    filter_frame,
+    width=25
+)
+
+filter_topic_entry.grid(
+    row=1,
+    column=1,
+    padx=10,
+    pady=10
+)
+
+
+topic_search_button = ttk.Button(
+    filter_frame,
+    text="Search Topic",
+    command=search_by_topic
+)
+
+topic_search_button.grid(
+    row=1,
+    column=2,
+    padx=10,
+    pady=10
+)
+
 
 filter_subject_entry = ttk.Entry(
     filter_frame,
@@ -607,12 +659,13 @@ filter_button.grid(
 show_all_button = ttk.Button(
     filter_frame,
     text="Show All",
-    command=clear_subject_filter
+    command=clear_filters
 )
 
 show_all_button.grid(
     row=0,
     column=3,
+    rowspan=2,
     padx=10,
     pady=10
 )
