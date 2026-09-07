@@ -246,17 +246,23 @@ def delete_study_session():
 def view_total_study_time():
     print("\n===== TOTAL STUDY TIME =====")
 
-    if not study_sessions:
-        print("No study sessions added yet.")
-        return
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
 
-    total_minutes = 0
+    cursor.execute("""
+        SELECT SUM(duration)
+        FROM study_sessions
+    """)
 
-    for session in study_sessions:
-        total_minutes += session["duration"]
+    total_minutes = cursor.fetchone()[0]
+
+    connection.close()
+
+    if total_minutes is None:
+        total_minutes = 0
 
     print(f"Total study time: {total_minutes} minutes")
-
+    
 def view_study_time_by_subject():
     print("\n===== STUDY TIME BY SUBJECT =====")
 
@@ -634,7 +640,7 @@ def edit_study_session():
     sync_json_from_database()
 
     print("\nStudy session updated successfully!")
-    
+
 def set_daily_goal():
     global daily_goal_minutes
 
