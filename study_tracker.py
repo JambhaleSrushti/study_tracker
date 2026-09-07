@@ -2,7 +2,6 @@ import sqlite3
 import json
 from datetime import date, timedelta
 
-DATA_FILE = "study_sessions.json"
 SETTINGS_FILE = "settings.json"
 DB_FILE = "study_tracker.db"
 
@@ -25,20 +24,6 @@ def save_daily_goal(goal):
 
 
 daily_goal_minutes = load_daily_goal()
-
-def load_sessions():
-    try:
-        with open(DATA_FILE, "r") as file:
-            return json.load(file)
-    except FileNotFoundError:
-        return []
-
-
-study_sessions = load_sessions()
-
-def save_sessions():
-    with open(DATA_FILE, "w") as file:
-        json.dump(study_sessions, file, indent=4)
 
 def initialize_database():
     connection = sqlite3.connect(DB_FILE)
@@ -94,55 +79,6 @@ def load_sessions_from_database():
 
     return rows
 
-def sync_json_from_database():
-    global study_sessions
-
-    database_sessions = load_sessions_from_database()
-
-    study_sessions = []
-
-    for session in database_sessions:
-        study_sessions.append({
-            "date": session[1],
-            "subject": session[2],
-            "topic": session[3],
-            "duration": session[4]
-        })
-
-    save_sessions()
-
-def migrate_json_to_database():
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute("SELECT COUNT(*) FROM study_sessions")
-    database_session_count = cursor.fetchone()[0]
-
-    if database_session_count > 0:
-        connection.close()
-        return
-
-    for session in study_sessions:
-        cursor.execute(
-            """
-            INSERT INTO study_sessions (date, subject, topic, duration)
-            VALUES (?, ?, ?, ?)
-            """,
-            (
-                session["date"],
-                session["subject"],
-                session["topic"],
-                session["duration"]
-            )
-        )
-
-    connection.commit()
-    connection.close()
-
-    print(
-        f"Migrated {len(study_sessions)} study sessions "
-        f"from JSON to SQLite."
-    )
 
 def add_study_session():
     print("\n===== ADD STUDY SESSION =====")
@@ -167,8 +103,6 @@ def add_study_session():
         "duration": duration
     }
 
-    study_sessions.append(session)
-    save_sessions()
     save_session_to_database(session)
 
     print("\nStudy session added successfully!")
@@ -239,7 +173,6 @@ def delete_study_session():
     connection.commit()
     connection.close()
 
-    sync_json_from_database()
 
     print("\nStudy session deleted successfully!")    
 
@@ -709,7 +642,6 @@ def edit_study_session():
     connection.commit()
     connection.close()
 
-    sync_json_from_database()
 
     print("\nStudy session updated successfully!")
 
@@ -825,5 +757,4 @@ def main():
             print("\nInvalid option. Please choose 1 to 16.")
 
 initialize_database()
-migrate_json_to_database()
 main()
