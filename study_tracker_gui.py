@@ -24,7 +24,7 @@ editing_session_id = None
 
 
 # =========================================================
-# TABLE FUNCTIONS
+# TABLE
 # =========================================================
 
 def refresh_session_table(sessions=None):
@@ -62,10 +62,10 @@ def refresh_statistics():
         text=f"Total Study Time\n{total_minutes} minutes"
     )
 
-    streak_text = "day" if streak == 1 else "days"
+    streak_word = "day" if streak == 1 else "days"
 
     streak_stat_label.config(
-        text=f"Current Streak\n{streak} {streak_text}"
+        text=f"Current Streak\n{streak} {streak_word}"
     )
 
     weekly_stat_label.config(
@@ -360,7 +360,7 @@ def clear_filters():
 
 
 # =========================================================
-# DATABASE INITIALIZATION
+# DATABASE
 # =========================================================
 
 initialize_database()
@@ -373,8 +373,13 @@ initialize_database()
 window = tk.Tk()
 
 window.title("Study Tracker")
-window.geometry("1100x850")
-window.minsize(950, 700)
+window.geometry("1100x800")
+window.minsize(900, 650)
+
+
+# Allow the table row to expand
+window.columnconfigure(0, weight=1)
+window.rowconfigure(6, weight=1)
 
 
 # =========================================================
@@ -387,8 +392,10 @@ title_label = ttk.Label(
     font=("Arial", 24)
 )
 
-title_label.pack(
-    pady=(20, 10)
+title_label.grid(
+    row=0,
+    column=0,
+    pady=(15, 10)
 )
 
 
@@ -401,10 +408,12 @@ form_frame = ttk.LabelFrame(
     text="Study Session"
 )
 
-form_frame.pack(
+form_frame.grid(
+    row=1,
+    column=0,
     padx=20,
-    pady=10,
-    fill="x"
+    pady=8,
+    sticky="ew"
 )
 
 
@@ -415,7 +424,7 @@ ttk.Label(
     row=0,
     column=0,
     padx=10,
-    pady=8,
+    pady=7,
     sticky="w"
 )
 
@@ -429,7 +438,7 @@ subject_entry.grid(
     row=0,
     column=1,
     padx=10,
-    pady=8
+    pady=7
 )
 
 
@@ -440,7 +449,7 @@ ttk.Label(
     row=1,
     column=0,
     padx=10,
-    pady=8,
+    pady=7,
     sticky="w"
 )
 
@@ -454,7 +463,7 @@ topic_entry.grid(
     row=1,
     column=1,
     padx=10,
-    pady=8
+    pady=7
 )
 
 
@@ -465,7 +474,7 @@ ttk.Label(
     row=2,
     column=0,
     padx=10,
-    pady=8,
+    pady=7,
     sticky="w"
 )
 
@@ -479,7 +488,7 @@ duration_entry.grid(
     row=2,
     column=1,
     padx=10,
-    pady=8
+    pady=7
 )
 
 
@@ -492,7 +501,7 @@ form_button_frame.grid(
     column=2,
     rowspan=3,
     padx=30,
-    pady=10
+    pady=7
 )
 
 
@@ -530,10 +539,12 @@ goal_frame = ttk.LabelFrame(
     text="Daily Goal"
 )
 
-goal_frame.pack(
+goal_frame.grid(
+    row=2,
+    column=0,
     padx=20,
-    pady=10,
-    fill="x"
+    pady=8,
+    sticky="ew"
 )
 
 
@@ -546,7 +557,7 @@ goal_label.grid(
     row=0,
     column=0,
     padx=15,
-    pady=8,
+    pady=7,
     sticky="w"
 )
 
@@ -560,7 +571,7 @@ progress_label.grid(
     row=0,
     column=1,
     padx=20,
-    pady=8,
+    pady=7,
     sticky="w"
 )
 
@@ -572,7 +583,7 @@ ttk.Label(
     row=1,
     column=0,
     padx=15,
-    pady=8,
+    pady=7,
     sticky="w"
 )
 
@@ -586,7 +597,7 @@ goal_entry.grid(
     row=1,
     column=1,
     padx=10,
-    pady=8,
+    pady=7,
     sticky="w"
 )
 
@@ -601,7 +612,7 @@ goal_button.grid(
     row=1,
     column=2,
     padx=10,
-    pady=8
+    pady=7
 )
 
 
@@ -614,11 +625,21 @@ stats_frame = ttk.LabelFrame(
     text="Study Summary"
 )
 
-stats_frame.pack(
+stats_frame.grid(
+    row=3,
+    column=0,
     padx=20,
-    pady=10,
-    fill="x"
+    pady=8,
+    sticky="ew"
 )
+
+
+# Make the four stats spread evenly
+for column in range(4):
+    stats_frame.columnconfigure(
+        column,
+        weight=1
+    )
 
 
 total_stat_label = ttk.Label(
@@ -630,8 +651,8 @@ total_stat_label = ttk.Label(
 total_stat_label.grid(
     row=0,
     column=0,
-    padx=35,
-    pady=15
+    padx=15,
+    pady=12
 )
 
 
@@ -644,8 +665,8 @@ streak_stat_label = ttk.Label(
 streak_stat_label.grid(
     row=0,
     column=1,
-    padx=35,
-    pady=15
+    padx=15,
+    pady=12
 )
 
 
@@ -658,8 +679,8 @@ weekly_stat_label = ttk.Label(
 weekly_stat_label.grid(
     row=0,
     column=2,
-    padx=35,
-    pady=15
+    padx=15,
+    pady=12
 )
 
 
@@ -672,8 +693,8 @@ monthly_stat_label = ttk.Label(
 monthly_stat_label.grid(
     row=0,
     column=3,
-    padx=35,
-    pady=15
+    padx=15,
+    pady=12
 )
 
 
@@ -686,10 +707,12 @@ filter_frame = ttk.LabelFrame(
     text="Filter Sessions"
 )
 
-filter_frame.pack(
+filter_frame.grid(
+    row=4,
+    column=0,
     padx=20,
-    pady=10,
-    fill="x"
+    pady=8,
+    sticky="ew"
 )
 
 
@@ -700,7 +723,7 @@ ttk.Label(
     row=0,
     column=0,
     padx=10,
-    pady=8
+    pady=7
 )
 
 
@@ -713,7 +736,7 @@ filter_subject_entry.grid(
     row=0,
     column=1,
     padx=10,
-    pady=8
+    pady=7
 )
 
 
@@ -727,7 +750,7 @@ filter_button.grid(
     row=0,
     column=2,
     padx=10,
-    pady=8
+    pady=7
 )
 
 
@@ -738,7 +761,7 @@ ttk.Label(
     row=1,
     column=0,
     padx=10,
-    pady=8
+    pady=7
 )
 
 
@@ -751,7 +774,7 @@ filter_topic_entry.grid(
     row=1,
     column=1,
     padx=10,
-    pady=8
+    pady=7
 )
 
 
@@ -765,7 +788,7 @@ topic_search_button.grid(
     row=1,
     column=2,
     padx=10,
-    pady=8
+    pady=7
 )
 
 
@@ -780,7 +803,69 @@ show_all_button.grid(
     column=3,
     rowspan=2,
     padx=20,
-    pady=8
+    pady=7
+)
+
+
+# =========================================================
+# STUDY SESSION HEADER + ACTION BUTTONS
+# =========================================================
+
+session_header_frame = ttk.Frame(
+    window
+)
+
+session_header_frame.grid(
+    row=5,
+    column=0,
+    padx=20,
+    pady=(8, 4),
+    sticky="ew"
+)
+
+
+session_header_frame.columnconfigure(
+    0,
+    weight=1
+)
+
+
+table_label = ttk.Label(
+    session_header_frame,
+    text="Study Sessions",
+    font=("Arial", 15)
+)
+
+table_label.grid(
+    row=0,
+    column=0,
+    sticky="w"
+)
+
+
+edit_button = ttk.Button(
+    session_header_frame,
+    text="Edit Selected Session",
+    command=edit_selected_session
+)
+
+edit_button.grid(
+    row=0,
+    column=1,
+    padx=5
+)
+
+
+delete_button = ttk.Button(
+    session_header_frame,
+    text="Delete Selected Session",
+    command=delete_selected_session
+)
+
+delete_button.grid(
+    row=0,
+    column=2,
+    padx=5
 )
 
 
@@ -788,26 +873,27 @@ show_all_button.grid(
 # STUDY SESSION TABLE
 # =========================================================
 
-table_label = ttk.Label(
-    window,
-    text="Study Sessions",
-    font=("Arial", 15)
-)
-
-table_label.pack(
-    pady=(10, 5)
-)
-
-
 table_frame = ttk.Frame(
     window
 )
 
-table_frame.pack(
+table_frame.grid(
+    row=6,
+    column=0,
     padx=20,
-    pady=10,
-    fill="both",
-    expand=True
+    pady=(4, 15),
+    sticky="nsew"
+)
+
+
+table_frame.columnconfigure(
+    0,
+    weight=1
+)
+
+table_frame.rowconfigure(
+    0,
+    weight=1
 )
 
 
@@ -850,7 +936,8 @@ session_table.heading(
 
 session_table.column(
     "date",
-    width=120
+    width=120,
+    anchor="center"
 )
 
 session_table.column(
@@ -865,11 +952,12 @@ session_table.column(
 
 session_table.column(
     "duration",
-    width=100
+    width=100,
+    anchor="center"
 )
 
 
-table_scrollbar = ttk.Scrollbar(
+vertical_scrollbar = ttk.Scrollbar(
     table_frame,
     orient="vertical",
     command=session_table.yview
@@ -877,57 +965,21 @@ table_scrollbar = ttk.Scrollbar(
 
 
 session_table.configure(
-    yscrollcommand=table_scrollbar.set
+    yscrollcommand=vertical_scrollbar.set
 )
 
 
-session_table.pack(
-    side="left",
-    fill="both",
-    expand=True
+session_table.grid(
+    row=0,
+    column=0,
+    sticky="nsew"
 )
 
 
-table_scrollbar.pack(
-    side="right",
-    fill="y"
-)
-
-
-# =========================================================
-# SESSION ACTIONS
-# =========================================================
-
-action_frame = ttk.Frame(
-    window
-)
-
-action_frame.pack(
-    pady=(0, 15)
-)
-
-
-edit_button = ttk.Button(
-    action_frame,
-    text="Edit Selected Session",
-    command=edit_selected_session
-)
-
-edit_button.pack(
-    side="left",
-    padx=5
-)
-
-
-delete_button = ttk.Button(
-    action_frame,
-    text="Delete Selected Session",
-    command=delete_selected_session
-)
-
-delete_button.pack(
-    side="left",
-    padx=5
+vertical_scrollbar.grid(
+    row=0,
+    column=1,
+    sticky="ns"
 )
 
 
