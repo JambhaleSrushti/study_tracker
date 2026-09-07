@@ -496,17 +496,24 @@ def view_sorted_sessions():
 def search_sessions_by_topic():
     print("\n===== SEARCH BY TOPIC =====")
 
-    if not study_sessions:
-        print("No study sessions added yet.")
-        return
+    topic_to_find = input("Enter topic keyword: ").strip()
 
-    topic_to_find = input("Enter topic keyword: ").strip().lower()
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
 
-    matching_sessions = []
+    cursor.execute(
+        """
+        SELECT id, date, subject, topic, duration
+        FROM study_sessions
+        WHERE topic LIKE ?
+        ORDER BY date
+        """,
+        (f"%{topic_to_find}%",)
+    )
 
-    for session in study_sessions:
-        if topic_to_find in session["topic"].lower():
-            matching_sessions.append(session)
+    matching_sessions = cursor.fetchall()
+
+    connection.close()
 
     if not matching_sessions:
         print(f"No study sessions found matching '{topic_to_find}'.")
@@ -515,10 +522,10 @@ def search_sessions_by_topic():
     for index, session in enumerate(matching_sessions, start=1):
         print(
             f"{index}. "
-            f"{session['date']} - "
-            f"{session['subject']} - "
-            f"{session['topic']} - "
-            f"{session['duration']} minutes"
+            f"{session[1]} - "
+            f"{session[2]} - "
+            f"{session[3]} - "
+            f"{session[4]} minutes"
         )
 
 def view_weekly_statistics():
