@@ -2,28 +2,8 @@ import sqlite3
 import json
 from datetime import date, timedelta
 
-SETTINGS_FILE = "settings.json"
 DB_FILE = "study_tracker.db"
 
-def load_daily_goal():
-    try:
-        with open(SETTINGS_FILE, "r") as file:
-            settings = json.load(file)
-            return settings.get("daily_goal_minutes")
-    except FileNotFoundError:
-        return None
-
-
-def save_daily_goal(goal):
-    settings = {
-        "daily_goal_minutes": goal
-    }
-
-    with open(SETTINGS_FILE, "w") as file:
-        json.dump(settings, file, indent=4)
-
-
-daily_goal_minutes = load_daily_goal()
 
 def initialize_database():
     connection = sqlite3.connect(DB_FILE)
@@ -39,6 +19,67 @@ def initialize_database():
             duration INTEGER NOT NULL
         )
     """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            id INTEGER PRIMARY KEY,
+            daily_goal_minutes INTEGER
+        )
+    """)
+
+    connection.commit()
+    connection.close()
+
+def load_daily_goal_from_database():
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT daily_goal_minutes
+        FROM settings
+        WHERE id = 1
+    """)
+
+    row = cursor.fetchone()
+
+    connection.close()
+
+    if row is None:
+        return None
+
+    return row[0]
+
+def save_daily_goal_to_database(goal):
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT id
+        FROM settings
+        WHERE id = 1
+        """
+    )
+
+    existing_setting = cursor.fetchone()
+
+    if existing_setting:
+        cursor.execute(
+            """
+            UPDATE settings
+            SET daily_goal_minutes = ?
+            WHERE id = 1
+            """,
+            (goal,)
+        )
+    else:
+        cursor.execute(
+            """
+            INSERT INTO settings (id, daily_goal_minutes)
+            VALUES (1, ?)
+            """,
+            (goal,)
+        )
 
     connection.commit()
     connection.close()
@@ -223,6 +264,8 @@ def view_study_time_by_subject():
 
 def view_daily_goal_progress():
     print("\n===== DAILY STUDY GOAL =====")
+
+    daily_goal_minutes = load_daily_goal_from_database()
 
     if daily_goal_minutes is None:
         print("Daily study goal has not been set yet.")
@@ -682,6 +725,22 @@ def view_database_sessions():
             f"{session[3]} - "
             f"{session[4]} minutes"
         )
+
+def set_daily_goal():
+    print("\n===== SET DAILY STUDY GOAL =====")
+
+    while True:
+        goal = input("Enter daily goal in minutes: ").strip()
+
+        if goal.isdigit() and int(goal) > 0:
+            goal = int(goal)
+
+            save_daily_goal_to_database(goal)
+
+            print(f"\nDaily study goal set to {goal} minutes.")
+            return
+
+        print("Please enter a valid number of minutes.")
 
 def main():
     while True:
