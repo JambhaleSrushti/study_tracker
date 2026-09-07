@@ -794,6 +794,26 @@ def get_today_study_minutes():
 
     return total
 
+def get_sessions_by_subject(subject):
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT id, date, subject, topic, duration
+        FROM study_sessions
+        WHERE subject = ?
+        ORDER BY date
+        """,
+        (subject,)
+    )
+
+    sessions = cursor.fetchall()
+
+    connection.close()
+
+    return sessions
+
 def main():
     while True:
         print("1. Add study session")
