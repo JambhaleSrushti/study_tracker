@@ -287,7 +287,7 @@ def view_study_time_by_subject():
 
     for subject, total_minutes in results:
         print(f"{subject}: {total_minutes} minutes")
-                
+
 def view_daily_goal_progress():
     print("\n===== DAILY STUDY GOAL =====")
 
@@ -296,11 +296,25 @@ def view_daily_goal_progress():
         return
 
     today = date.today().isoformat()
-    today_minutes = 0
 
-    for session in study_sessions:
-        if session["date"] == today:
-            today_minutes += session["duration"]
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT SUM(duration)
+        FROM study_sessions
+        WHERE date = ?
+        """,
+        (today,)
+    )
+
+    today_minutes = cursor.fetchone()[0]
+
+    connection.close()
+
+    if today_minutes is None:
+        today_minutes = 0
 
     progress = (today_minutes / daily_goal_minutes) * 100
 
@@ -313,7 +327,7 @@ def view_daily_goal_progress():
     else:
         remaining = daily_goal_minutes - today_minutes
         print(f"{remaining} minutes remaining.")
-
+        
 def view_study_streak():
     print("\n===== STUDY STREAK =====")
 
