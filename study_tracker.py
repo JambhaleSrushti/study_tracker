@@ -331,14 +331,26 @@ def view_daily_goal_progress():
 def view_study_streak():
     print("\n===== STUDY STREAK =====")
 
-    if not study_sessions:
-        print("Current streak: 0 days")
-        return
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT DISTINCT date
+        FROM study_sessions
+        ORDER BY date DESC
+    """)
+
+    rows = cursor.fetchall()
+    connection.close()
 
     study_dates = set()
 
-    for session in study_sessions:
-        study_dates.add(session["date"])
+    for row in rows:
+        study_dates.add(row[0])
+
+    if not study_dates:
+        print("Current streak: 0 days")
+        return
 
     today = date.today()
     yesterday = today - timedelta(days=1)
@@ -357,22 +369,32 @@ def view_study_streak():
         streak += 1
         current_date -= timedelta(days=1)
 
-    print(f"Current streak: {streak} days")
+    if streak == 1:
+        print("Current streak: 1 day")
+    else:
+        print(f"Current streak: {streak} days")
 
 def filter_sessions_by_subject():
     print("\n===== FILTER BY SUBJECT =====")
 
-    if not study_sessions:
-        print("No study sessions added yet.")
-        return
-
     subject_to_find = input("Enter subject: ").strip().title()
 
-    matching_sessions = []
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
 
-    for session in study_sessions:
-        if session["subject"] == subject_to_find:
-            matching_sessions.append(session)
+    cursor.execute(
+        """
+        SELECT id, date, subject, topic, duration
+        FROM study_sessions
+        WHERE subject = ?
+        ORDER BY date
+        """,
+        (subject_to_find,)
+    )
+
+    matching_sessions = cursor.fetchall()
+
+    connection.close()
 
     if not matching_sessions:
         print(f"No study sessions found for {subject_to_find}.")
@@ -381,10 +403,10 @@ def filter_sessions_by_subject():
     for index, session in enumerate(matching_sessions, start=1):
         print(
             f"{index}. "
-            f"{session['date']} - "
-            f"{session['subject']} - "
-            f"{session['topic']} - "
-            f"{session['duration']} minutes"
+            f"{session[1]} - "
+            f"{session[2]} - "
+            f"{session[3]} - "
+            f"{session[4]} minutes"
         )
 
 def filter_sessions_by_date():
