@@ -815,5 +815,6 @@ def main():
         else:
             print("\nInvalid option. Please choose 1 to 16.")
 
-initialize_database()
-main()
+if __name__ == "__main__":
+    initialize_database()
+    main()
