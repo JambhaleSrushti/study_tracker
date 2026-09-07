@@ -12,7 +12,11 @@ from study_tracker import (
     save_daily_goal_to_database,
     get_today_study_minutes,
     get_sessions_by_subject,
-    get_sessions_by_topic
+    get_sessions_by_topic,
+    get_total_study_minutes,
+    get_current_streak,
+    get_weekly_study_minutes,
+    get_monthly_study_minutes
 )
 
 
@@ -20,16 +24,13 @@ editing_session_id = None
 
 
 # =========================================================
-# SESSION TABLE
+# TABLE FUNCTIONS
 # =========================================================
 
 def refresh_session_table(sessions=None):
-    # Remove existing rows from the table
     for item in session_table.get_children():
         session_table.delete(item)
 
-    # If no filtered sessions were provided,
-    # load all sessions from SQLite
     if sessions is None:
         sessions = load_sessions_from_database()
 
@@ -37,195 +38,42 @@ def refresh_session_table(sessions=None):
         session_table.insert(
             "",
             tk.END,
-            iid=str(session[0]),  # SQLite ID
+            iid=str(session[0]),
             values=(
-                session[1],      # date
-                session[2],      # subject
-                session[3],      # topic
-                session[4]       # duration
+                session[1],
+                session[2],
+                session[3],
+                session[4]
             )
         )
 
 
 # =========================================================
-# ADD SESSION
+# STATISTICS
 # =========================================================
 
-def add_study_session():
-    subject = subject_entry.get().strip().title()
-    topic = topic_entry.get().strip()
-    duration = duration_entry.get().strip()
+def refresh_statistics():
+    total_minutes = get_total_study_minutes()
+    streak = get_current_streak()
+    weekly_minutes = get_weekly_study_minutes()
+    monthly_minutes = get_monthly_study_minutes()
 
-    if not subject:
-        messagebox.showerror(
-            "Invalid Input",
-            "Please enter a subject."
-        )
-        return
-
-    if not topic:
-        messagebox.showerror(
-            "Invalid Input",
-            "Please enter a topic."
-        )
-        return
-
-    if not duration.isdigit() or int(duration) <= 0:
-        messagebox.showerror(
-            "Invalid Input",
-            "Please enter a valid duration in minutes."
-        )
-        return
-
-    session = {
-        "date": date.today().isoformat(),
-        "subject": subject,
-        "topic": topic,
-        "duration": int(duration)
-    }
-
-    save_session_to_database(session)
-
-    # Clear form
-    subject_entry.delete(0, tk.END)
-    topic_entry.delete(0, tk.END)
-    duration_entry.delete(0, tk.END)
-
-    refresh_session_table()
-    refresh_daily_goal()
-
-    messagebox.showinfo(
-        "Success",
-        "Study session added successfully!"
+    total_stat_label.config(
+        text=f"Total Study Time\n{total_minutes} minutes"
     )
 
+    streak_text = "day" if streak == 1 else "days"
 
-# =========================================================
-# DELETE SESSION
-# =========================================================
-
-def delete_selected_session():
-    selected_items = session_table.selection()
-
-    if not selected_items:
-        messagebox.showwarning(
-            "No Selection",
-            "Please select a study session to delete."
-        )
-        return
-
-    selected_item = selected_items[0]
-    session_id = int(selected_item)
-
-    confirmed = messagebox.askyesno(
-        "Confirm Delete",
-        "Are you sure you want to delete this study session?"
+    streak_stat_label.config(
+        text=f"Current Streak\n{streak} {streak_text}"
     )
 
-    if not confirmed:
-        return
-
-    delete_session_by_id(session_id)
-
-    refresh_session_table()
-    refresh_daily_goal()
-
-    messagebox.showinfo(
-        "Deleted",
-        "Study session deleted successfully!"
+    weekly_stat_label.config(
+        text=f"This Week\n{weekly_minutes} minutes"
     )
 
-
-# =========================================================
-# EDIT SESSION
-# =========================================================
-
-def edit_selected_session():
-    global editing_session_id
-
-    selected_items = session_table.selection()
-
-    if not selected_items:
-        messagebox.showwarning(
-            "No Selection",
-            "Please select a study session to edit."
-        )
-        return
-
-    selected_item = selected_items[0]
-
-    editing_session_id = int(selected_item)
-
-    values = session_table.item(
-        selected_item,
-        "values"
-    )
-
-    # Clear existing form values
-    subject_entry.delete(0, tk.END)
-    topic_entry.delete(0, tk.END)
-    duration_entry.delete(0, tk.END)
-
-    # Populate selected session
-    subject_entry.insert(0, values[1])
-    topic_entry.insert(0, values[2])
-    duration_entry.insert(0, values[3])
-
-    save_changes_button.config(state="normal")
-
-
-def save_changes():
-    global editing_session_id
-
-    if editing_session_id is None:
-        return
-
-    subject = subject_entry.get().strip().title()
-    topic = topic_entry.get().strip()
-    duration = duration_entry.get().strip()
-
-    if not subject:
-        messagebox.showerror(
-            "Invalid Input",
-            "Please enter a subject."
-        )
-        return
-
-    if not topic:
-        messagebox.showerror(
-            "Invalid Input",
-            "Please enter a topic."
-        )
-        return
-
-    if not duration.isdigit() or int(duration) <= 0:
-        messagebox.showerror(
-            "Invalid Input",
-            "Please enter a valid duration in minutes."
-        )
-        return
-
-    update_session_by_id(
-        editing_session_id,
-        subject,
-        topic,
-        int(duration)
-    )
-
-    editing_session_id = None
-
-    subject_entry.delete(0, tk.END)
-    topic_entry.delete(0, tk.END)
-    duration_entry.delete(0, tk.END)
-
-    save_changes_button.config(state="disabled")
-
-    refresh_session_table()
-    refresh_daily_goal()
-
-    messagebox.showinfo(
-        "Updated",
-        "Study session updated successfully!"
+    monthly_stat_label.config(
+        text=f"This Month\n{monthly_minutes} minutes"
     )
 
 
@@ -285,7 +133,193 @@ def update_daily_goal():
 
 
 # =========================================================
-# FILTER
+# ADD SESSION
+# =========================================================
+
+def add_study_session():
+    subject = subject_entry.get().strip().title()
+    topic = topic_entry.get().strip()
+    duration = duration_entry.get().strip()
+
+    if not subject:
+        messagebox.showerror(
+            "Invalid Input",
+            "Please enter a subject."
+        )
+        return
+
+    if not topic:
+        messagebox.showerror(
+            "Invalid Input",
+            "Please enter a topic."
+        )
+        return
+
+    if not duration.isdigit() or int(duration) <= 0:
+        messagebox.showerror(
+            "Invalid Input",
+            "Please enter a valid duration in minutes."
+        )
+        return
+
+    session = {
+        "date": date.today().isoformat(),
+        "subject": subject,
+        "topic": topic,
+        "duration": int(duration)
+    }
+
+    save_session_to_database(session)
+
+    subject_entry.delete(0, tk.END)
+    topic_entry.delete(0, tk.END)
+    duration_entry.delete(0, tk.END)
+
+    refresh_session_table()
+    refresh_daily_goal()
+    refresh_statistics()
+
+    messagebox.showinfo(
+        "Success",
+        "Study session added successfully!"
+    )
+
+
+# =========================================================
+# DELETE SESSION
+# =========================================================
+
+def delete_selected_session():
+    selected_items = session_table.selection()
+
+    if not selected_items:
+        messagebox.showwarning(
+            "No Selection",
+            "Please select a study session to delete."
+        )
+        return
+
+    selected_item = selected_items[0]
+    session_id = int(selected_item)
+
+    confirmed = messagebox.askyesno(
+        "Confirm Delete",
+        "Are you sure you want to delete this study session?"
+    )
+
+    if not confirmed:
+        return
+
+    delete_session_by_id(session_id)
+
+    refresh_session_table()
+    refresh_daily_goal()
+    refresh_statistics()
+
+    messagebox.showinfo(
+        "Deleted",
+        "Study session deleted successfully!"
+    )
+
+
+# =========================================================
+# EDIT SESSION
+# =========================================================
+
+def edit_selected_session():
+    global editing_session_id
+
+    selected_items = session_table.selection()
+
+    if not selected_items:
+        messagebox.showwarning(
+            "No Selection",
+            "Please select a study session to edit."
+        )
+        return
+
+    selected_item = selected_items[0]
+
+    editing_session_id = int(selected_item)
+
+    values = session_table.item(
+        selected_item,
+        "values"
+    )
+
+    subject_entry.delete(0, tk.END)
+    topic_entry.delete(0, tk.END)
+    duration_entry.delete(0, tk.END)
+
+    subject_entry.insert(0, values[1])
+    topic_entry.insert(0, values[2])
+    duration_entry.insert(0, values[3])
+
+    save_changes_button.config(
+        state="normal"
+    )
+
+
+def save_changes():
+    global editing_session_id
+
+    if editing_session_id is None:
+        return
+
+    subject = subject_entry.get().strip().title()
+    topic = topic_entry.get().strip()
+    duration = duration_entry.get().strip()
+
+    if not subject:
+        messagebox.showerror(
+            "Invalid Input",
+            "Please enter a subject."
+        )
+        return
+
+    if not topic:
+        messagebox.showerror(
+            "Invalid Input",
+            "Please enter a topic."
+        )
+        return
+
+    if not duration.isdigit() or int(duration) <= 0:
+        messagebox.showerror(
+            "Invalid Input",
+            "Please enter a valid duration in minutes."
+        )
+        return
+
+    update_session_by_id(
+        editing_session_id,
+        subject,
+        topic,
+        int(duration)
+    )
+
+    editing_session_id = None
+
+    subject_entry.delete(0, tk.END)
+    topic_entry.delete(0, tk.END)
+    duration_entry.delete(0, tk.END)
+
+    save_changes_button.config(
+        state="disabled"
+    )
+
+    refresh_session_table()
+    refresh_daily_goal()
+    refresh_statistics()
+
+    messagebox.showinfo(
+        "Updated",
+        "Study session updated successfully!"
+    )
+
+
+# =========================================================
+# FILTER / SEARCH
 # =========================================================
 
 def filter_by_subject():
@@ -303,12 +337,6 @@ def filter_by_subject():
     refresh_session_table(sessions)
 
 
-def clear_filters():
-    filter_subject_entry.delete(0, tk.END)
-    filter_topic_entry.delete(0, tk.END)
-
-    refresh_session_table()
-
 def search_by_topic():
     keyword = filter_topic_entry.get().strip()
 
@@ -322,6 +350,14 @@ def search_by_topic():
     sessions = get_sessions_by_topic(keyword)
 
     refresh_session_table(sessions)
+
+
+def clear_filters():
+    filter_subject_entry.delete(0, tk.END)
+    filter_topic_entry.delete(0, tk.END)
+
+    refresh_session_table()
+
 
 # =========================================================
 # DATABASE INITIALIZATION
@@ -337,8 +373,8 @@ initialize_database()
 window = tk.Tk()
 
 window.title("Study Tracker")
-window.geometry("1000x750")
-window.minsize(850, 650)
+window.geometry("1100x850")
+window.minsize(950, 700)
 
 
 # =========================================================
@@ -348,14 +384,16 @@ window.minsize(850, 650)
 title_label = ttk.Label(
     window,
     text="Study Tracker",
-    font=("Arial", 22)
+    font=("Arial", 24)
 )
 
-title_label.pack(pady=20)
+title_label.pack(
+    pady=(20, 10)
+)
 
 
 # =========================================================
-# ADD / EDIT FORM
+# STUDY SESSION FORM
 # =========================================================
 
 form_frame = ttk.LabelFrame(
@@ -377,7 +415,7 @@ ttk.Label(
     row=0,
     column=0,
     padx=10,
-    pady=10,
+    pady=8,
     sticky="w"
 )
 
@@ -391,7 +429,7 @@ subject_entry.grid(
     row=0,
     column=1,
     padx=10,
-    pady=10
+    pady=8
 )
 
 
@@ -402,7 +440,7 @@ ttk.Label(
     row=1,
     column=0,
     padx=10,
-    pady=10,
+    pady=8,
     sticky="w"
 )
 
@@ -416,7 +454,7 @@ topic_entry.grid(
     row=1,
     column=1,
     padx=10,
-    pady=10
+    pady=8
 )
 
 
@@ -427,7 +465,7 @@ ttk.Label(
     row=2,
     column=0,
     padx=10,
-    pady=10,
+    pady=8,
     sticky="w"
 )
 
@@ -441,17 +479,19 @@ duration_entry.grid(
     row=2,
     column=1,
     padx=10,
-    pady=10
+    pady=8
 )
 
 
-form_button_frame = ttk.Frame(form_frame)
+form_button_frame = ttk.Frame(
+    form_frame
+)
 
 form_button_frame.grid(
     row=0,
     column=2,
     rowspan=3,
-    padx=20,
+    padx=30,
     pady=10
 )
 
@@ -505,8 +545,8 @@ goal_label = ttk.Label(
 goal_label.grid(
     row=0,
     column=0,
-    padx=10,
-    pady=10,
+    padx=15,
+    pady=8,
     sticky="w"
 )
 
@@ -520,7 +560,7 @@ progress_label.grid(
     row=0,
     column=1,
     padx=20,
-    pady=10,
+    pady=8,
     sticky="w"
 )
 
@@ -531,8 +571,8 @@ ttk.Label(
 ).grid(
     row=1,
     column=0,
-    padx=10,
-    pady=10,
+    padx=15,
+    pady=8,
     sticky="w"
 )
 
@@ -546,7 +586,7 @@ goal_entry.grid(
     row=1,
     column=1,
     padx=10,
-    pady=10,
+    pady=8,
     sticky="w"
 )
 
@@ -561,12 +601,84 @@ goal_button.grid(
     row=1,
     column=2,
     padx=10,
-    pady=10
+    pady=8
 )
 
 
 # =========================================================
-# FILTER
+# STUDY SUMMARY
+# =========================================================
+
+stats_frame = ttk.LabelFrame(
+    window,
+    text="Study Summary"
+)
+
+stats_frame.pack(
+    padx=20,
+    pady=10,
+    fill="x"
+)
+
+
+total_stat_label = ttk.Label(
+    stats_frame,
+    text="Total Study Time\n0 minutes",
+    justify="center"
+)
+
+total_stat_label.grid(
+    row=0,
+    column=0,
+    padx=35,
+    pady=15
+)
+
+
+streak_stat_label = ttk.Label(
+    stats_frame,
+    text="Current Streak\n0 days",
+    justify="center"
+)
+
+streak_stat_label.grid(
+    row=0,
+    column=1,
+    padx=35,
+    pady=15
+)
+
+
+weekly_stat_label = ttk.Label(
+    stats_frame,
+    text="This Week\n0 minutes",
+    justify="center"
+)
+
+weekly_stat_label.grid(
+    row=0,
+    column=2,
+    padx=35,
+    pady=15
+)
+
+
+monthly_stat_label = ttk.Label(
+    stats_frame,
+    text="This Month\n0 minutes",
+    justify="center"
+)
+
+monthly_stat_label.grid(
+    row=0,
+    column=3,
+    padx=35,
+    pady=15
+)
+
+
+# =========================================================
+# FILTER / SEARCH
 # =========================================================
 
 filter_frame = ttk.LabelFrame(
@@ -588,8 +700,36 @@ ttk.Label(
     row=0,
     column=0,
     padx=10,
-    pady=10
+    pady=8
 )
+
+
+filter_subject_entry = ttk.Entry(
+    filter_frame,
+    width=25
+)
+
+filter_subject_entry.grid(
+    row=0,
+    column=1,
+    padx=10,
+    pady=8
+)
+
+
+filter_button = ttk.Button(
+    filter_frame,
+    text="Filter Subject",
+    command=filter_by_subject
+)
+
+filter_button.grid(
+    row=0,
+    column=2,
+    padx=10,
+    pady=8
+)
+
 
 ttk.Label(
     filter_frame,
@@ -598,7 +738,7 @@ ttk.Label(
     row=1,
     column=0,
     padx=10,
-    pady=10
+    pady=8
 )
 
 
@@ -611,7 +751,7 @@ filter_topic_entry.grid(
     row=1,
     column=1,
     padx=10,
-    pady=10
+    pady=8
 )
 
 
@@ -625,34 +765,7 @@ topic_search_button.grid(
     row=1,
     column=2,
     padx=10,
-    pady=10
-)
-
-
-filter_subject_entry = ttk.Entry(
-    filter_frame,
-    width=25
-)
-
-filter_subject_entry.grid(
-    row=0,
-    column=1,
-    padx=10,
-    pady=10
-)
-
-
-filter_button = ttk.Button(
-    filter_frame,
-    text="Filter",
-    command=filter_by_subject
-)
-
-filter_button.grid(
-    row=0,
-    column=2,
-    padx=10,
-    pady=10
+    pady=8
 )
 
 
@@ -666,8 +779,8 @@ show_all_button.grid(
     row=0,
     column=3,
     rowspan=2,
-    padx=10,
-    pady=10
+    padx=20,
+    pady=8
 )
 
 
@@ -678,7 +791,7 @@ show_all_button.grid(
 table_label = ttk.Label(
     window,
     text="Study Sessions",
-    font=("Arial", 14)
+    font=("Arial", 15)
 )
 
 table_label.pack(
@@ -686,7 +799,9 @@ table_label.pack(
 )
 
 
-table_frame = ttk.Frame(window)
+table_frame = ttk.Frame(
+    window
+)
 
 table_frame.pack(
     padx=20,
@@ -740,12 +855,12 @@ session_table.column(
 
 session_table.column(
     "subject",
-    width=200
+    width=220
 )
 
 session_table.column(
     "topic",
-    width=300
+    width=350
 )
 
 session_table.column(
@@ -754,13 +869,12 @@ session_table.column(
 )
 
 
-# Vertical scrollbar
-
 table_scrollbar = ttk.Scrollbar(
     table_frame,
     orient="vertical",
     command=session_table.yview
 )
+
 
 session_table.configure(
     yscrollcommand=table_scrollbar.set
@@ -773,6 +887,7 @@ session_table.pack(
     expand=True
 )
 
+
 table_scrollbar.pack(
     side="right",
     fill="y"
@@ -780,10 +895,12 @@ table_scrollbar.pack(
 
 
 # =========================================================
-# TABLE ACTION BUTTONS
+# SESSION ACTIONS
 # =========================================================
 
-action_frame = ttk.Frame(window)
+action_frame = ttk.Frame(
+    window
+)
 
 action_frame.pack(
     pady=(0, 15)
@@ -815,15 +932,16 @@ delete_button.pack(
 
 
 # =========================================================
-# INITIAL DATA LOAD
+# INITIAL LOAD
 # =========================================================
 
 refresh_session_table()
 refresh_daily_goal()
+refresh_statistics()
 
 
 # =========================================================
-# START GUI
+# START APPLICATION
 # =========================================================
 
 window.mainloop()

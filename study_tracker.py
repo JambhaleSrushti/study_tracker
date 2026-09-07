@@ -148,6 +148,121 @@ def load_sessions_from_database():
 
     return rows
 
+def get_total_study_minutes():
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT SUM(duration)
+        FROM study_sessions
+    """)
+
+    total = cursor.fetchone()[0]
+
+    connection.close()
+
+    if total is None:
+        return 0
+
+    return total
+
+def get_current_streak():
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT DISTINCT date
+        FROM study_sessions
+    """)
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    study_dates = {row[0] for row in rows}
+
+    if not study_dates:
+        return 0
+
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+
+    if today.isoformat() in study_dates:
+        current_date = today
+
+    elif yesterday.isoformat() in study_dates:
+        current_date = yesterday
+
+    else:
+        return 0
+
+    streak = 0
+
+    while current_date.isoformat() in study_dates:
+        streak += 1
+        current_date -= timedelta(days=1)
+
+    return streak
+
+def get_weekly_study_minutes():
+    today = date.today()
+
+    week_start = today - timedelta(
+        days=today.weekday()
+    )
+
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT SUM(duration)
+        FROM study_sessions
+        WHERE date BETWEEN ? AND ?
+        """,
+        (
+            week_start.isoformat(),
+            today.isoformat()
+        )
+    )
+
+    total = cursor.fetchone()[0]
+
+    connection.close()
+
+    if total is None:
+        return 0
+
+    return total
+
+def get_monthly_study_minutes():
+    today = date.today()
+
+    month_start = today.replace(day=1)
+
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT SUM(duration)
+        FROM study_sessions
+        WHERE date BETWEEN ? AND ?
+        """,
+        (
+            month_start.isoformat(),
+            today.isoformat()
+        )
+    )
+
+    total = cursor.fetchone()[0]
+
+    connection.close()
+
+    if total is None:
+        return 0
+
+    return total
 
 def add_study_session():
     print("\n===== ADD STUDY SESSION =====")
