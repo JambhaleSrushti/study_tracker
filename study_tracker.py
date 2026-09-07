@@ -30,6 +30,18 @@ def initialize_database():
     connection.commit()
     connection.close()
 
+def delete_session_by_id(session_id):
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "DELETE FROM study_sessions WHERE id = ?",
+        (session_id,)
+    )
+
+    connection.commit()
+    connection.close()
+
 def load_daily_goal_from_database():
     connection = sqlite3.connect(DB_FILE)
     cursor = connection.cursor()

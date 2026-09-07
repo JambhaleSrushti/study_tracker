@@ -5,7 +5,8 @@ from datetime import date
 from study_tracker import (
     initialize_database,
     save_session_to_database,
-    load_sessions_from_database
+    load_sessions_from_database,
+    delete_session_by_id
 )
 
 def refresh_session_table():
@@ -18,6 +19,7 @@ def refresh_session_table():
         session_table.insert(
             "",
             tk.END,
+            iid=str(session[0]),
             values=(
                 session[1],
                 session[2],
@@ -67,6 +69,36 @@ def add_study_session():
 
 
 initialize_database()
+
+def delete_selected_session():
+    selected_items = session_table.selection()
+
+    if not selected_items:
+        messagebox.showwarning(
+            "No Selection",
+            "Please select a study session to delete."
+        )
+        return
+
+    selected_item = selected_items[0]
+    session_id = int(selected_item)
+
+    confirmed = messagebox.askyesno(
+        "Confirm Delete",
+        "Are you sure you want to delete this study session?"
+    )
+
+    if not confirmed:
+        return
+
+    delete_session_by_id(session_id)
+
+    refresh_session_table()
+
+    messagebox.showinfo(
+        "Deleted",
+        "Study session deleted successfully!"
+    )
 
 window = tk.Tk()
 window.title("Study Tracker")
@@ -194,6 +226,14 @@ session_table.pack(
     fill="both",
     expand=True
 )
+
+delete_button = ttk.Button(
+    window,
+    text="Delete Selected Session",
+    command=delete_selected_session
+)
+
+delete_button.pack(pady=10)
 
 refresh_session_table()
 
