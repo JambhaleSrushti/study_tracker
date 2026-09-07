@@ -526,13 +526,24 @@ def view_monthly_statistics():
 def edit_study_session():
     print("\n===== EDIT STUDY SESSION =====")
 
-    if not study_sessions:
+    sessions = load_sessions_from_database()
+
+    if not sessions:
         print("No study sessions to edit.")
         return
 
-    view_study_sessions()
+    for index, session in enumerate(sessions, start=1):
+        print(
+            f"{index}. "
+            f"{session[1]} - "
+            f"{session[2]} - "
+            f"{session[3]} - "
+            f"{session[4]} minutes"
+        )
 
-    session_number = input("\nEnter session number to edit: ").strip()
+    session_number = input(
+        "\nEnter session number to edit: "
+    ).strip()
 
     if not session_number.isdigit():
         print("Please enter a valid session number.")
@@ -540,55 +551,90 @@ def edit_study_session():
 
     session_number = int(session_number)
 
-    if session_number < 1 or session_number > len(study_sessions):
+    if session_number < 1 or session_number > len(sessions):
         print("Session not found.")
         return
 
-    session = study_sessions[session_number - 1]
+    selected_session = sessions[session_number - 1]
+    session_id = selected_session[0]
 
     print("\nWhat would you like to edit?")
     print("1. Subject")
     print("2. Topic")
     print("3. Duration")
 
-    choice = input("Choose an option: ")
+    choice = input("Choose an option: ").strip()
+
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
 
     if choice == "1":
         new_subject = input("Enter new subject: ").strip().title()
 
         if not new_subject:
             print("Subject cannot be empty.")
+            connection.close()
             return
 
-        session["subject"] = new_subject
+        cursor.execute(
+            """
+            UPDATE study_sessions
+            SET subject = ?
+            WHERE id = ?
+            """,
+            (new_subject, session_id)
+        )
 
     elif choice == "2":
         new_topic = input("Enter new topic: ").strip()
 
         if not new_topic:
             print("Topic cannot be empty.")
+            connection.close()
             return
 
-        session["topic"] = new_topic
+        cursor.execute(
+            """
+            UPDATE study_sessions
+            SET topic = ?
+            WHERE id = ?
+            """,
+            (new_topic, session_id)
+        )
 
     elif choice == "3":
         while True:
-            new_duration = input("Enter new duration (minutes): ")
+            new_duration = input(
+                "Enter new duration (minutes): "
+            ).strip()
 
             if new_duration.isdigit() and int(new_duration) > 0:
-                session["duration"] = int(new_duration)
+                new_duration = int(new_duration)
                 break
 
             print("Please enter a valid duration in minutes.")
 
+        cursor.execute(
+            """
+            UPDATE study_sessions
+            SET duration = ?
+            WHERE id = ?
+            """,
+            (new_duration, session_id)
+        )
+
     else:
         print("Invalid option.")
+        connection.close()
         return
 
-    save_sessions()
+    connection.commit()
+    connection.close()
+
+    sync_json_from_database()
 
     print("\nStudy session updated successfully!")
-
+    
 def set_daily_goal():
     global daily_goal_minutes
 
