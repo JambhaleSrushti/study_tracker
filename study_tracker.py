@@ -96,6 +96,22 @@ def save_daily_goal_to_database(goal):
     connection.commit()
     connection.close()
 
+def update_session_by_id(session_id, subject, topic, duration):
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE study_sessions
+        SET subject = ?, topic = ?, duration = ?
+        WHERE id = ?
+        """,
+        (subject, topic, duration, session_id)
+    )
+
+    connection.commit()
+    connection.close()
+
 def save_session_to_database(session):
     connection = sqlite3.connect(DB_FILE)
     cursor = connection.cursor()

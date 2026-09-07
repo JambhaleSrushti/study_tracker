@@ -1,12 +1,14 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import date
+editing_session_id = None
 
 from study_tracker import (
     initialize_database,
     save_session_to_database,
     load_sessions_from_database,
-    delete_session_by_id
+    delete_session_by_id,
+    update_session_by_id
 )
 
 def refresh_session_table():
@@ -98,6 +100,87 @@ def delete_selected_session():
     messagebox.showinfo(
         "Deleted",
         "Study session deleted successfully!"
+    )
+
+def edit_selected_session():
+    global editing_session_id
+
+    selected_items = session_table.selection()
+
+    if not selected_items:
+        messagebox.showwarning(
+            "No Selection",
+            "Please select a study session to edit."
+        )
+        return
+
+    selected_item = selected_items[0]
+    editing_session_id = int(selected_item)
+
+    values = session_table.item(selected_item, "values")
+
+    subject_entry.delete(0, tk.END)
+    subject_entry.insert(0, values[1])
+
+    topic_entry.delete(0, tk.END)
+    topic_entry.insert(0, values[2])
+
+    duration_entry.delete(0, tk.END)
+    duration_entry.insert(0, values[3])
+
+    save_changes_button.config(state="normal")
+
+def save_changes():
+    global editing_session_id
+
+    if editing_session_id is None:
+        return
+
+    subject = subject_entry.get().strip().title()
+    topic = topic_entry.get().strip()
+    duration = duration_entry.get().strip()
+
+    if not subject:
+        messagebox.showerror(
+            "Invalid Input",
+            "Please enter a subject."
+        )
+        return
+
+    if not topic:
+        messagebox.showerror(
+            "Invalid Input",
+            "Please enter a topic."
+        )
+        return
+
+    if not duration.isdigit() or int(duration) <= 0:
+        messagebox.showerror(
+            "Invalid Input",
+            "Please enter a valid duration in minutes."
+        )
+        return
+
+    update_session_by_id(
+        editing_session_id,
+        subject,
+        topic,
+        int(duration)
+    )
+
+    editing_session_id = None
+
+    subject_entry.delete(0, tk.END)
+    topic_entry.delete(0, tk.END)
+    duration_entry.delete(0, tk.END)
+
+    save_changes_button.config(state="disabled")
+
+    refresh_session_table()
+
+    messagebox.showinfo(
+        "Updated",
+        "Study session updated successfully!"
     )
 
 window = tk.Tk()
@@ -232,6 +315,22 @@ delete_button = ttk.Button(
     text="Delete Selected Session",
     command=delete_selected_session
 )
+
+edit_button = ttk.Button(
+    window,
+    text="Edit Selected Session",
+    command=edit_selected_session
+)
+edit_button.pack(pady=5)
+
+
+save_changes_button = ttk.Button(
+    window,
+    text="Save Changes",
+    command=save_changes,
+    state="disabled"
+)
+save_changes_button.pack(pady=5)
 
 delete_button.pack(pady=10)
 
