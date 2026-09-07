@@ -2,8 +2,29 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import date
 
-from study_tracker import initialize_database, save_session_to_database
+from study_tracker import (
+    initialize_database,
+    save_session_to_database,
+    load_sessions_from_database
+)
 
+def refresh_session_table():
+    for item in session_table.get_children():
+        session_table.delete(item)
+
+    sessions = load_sessions_from_database()
+
+    for session in sessions:
+        session_table.insert(
+            "",
+            tk.END,
+            values=(
+                session[1],
+                session[2],
+                session[3],
+                session[4]
+            )
+        )
 
 def add_study_session():
     subject = subject_entry.get().strip().title()
@@ -33,6 +54,7 @@ def add_study_session():
     }
 
     save_session_to_database(session)
+    refresh_session_table()
 
     messagebox.showinfo(
         "Success",
@@ -48,7 +70,7 @@ initialize_database()
 
 window = tk.Tk()
 window.title("Study Tracker")
-window.geometry("500x350")
+window.geometry("850x550")
 
 
 title_label = ttk.Label(
@@ -130,5 +152,49 @@ add_button = ttk.Button(
 )
 add_button.pack(pady=20)
 
+table_label = ttk.Label(
+    window,
+    text="Study Sessions",
+    font=("Arial", 14)
+)
+table_label.pack(pady=(20, 5))
+
+
+table_frame = ttk.Frame(window)
+table_frame.pack(
+    padx=20,
+    pady=10,
+    fill="both",
+    expand=True
+)
+
+
+columns = ("date", "subject", "topic", "duration")
+
+session_table = ttk.Treeview(
+    table_frame,
+    columns=columns,
+    show="headings"
+)
+
+
+session_table.heading("date", text="Date")
+session_table.heading("subject", text="Subject")
+session_table.heading("topic", text="Topic")
+session_table.heading("duration", text="Duration")
+
+
+session_table.column("date", width=120)
+session_table.column("subject", width=180)
+session_table.column("topic", width=250)
+session_table.column("duration", width=100)
+
+
+session_table.pack(
+    fill="both",
+    expand=True
+)
+
+refresh_session_table()
 
 window.mainloop()
