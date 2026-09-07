@@ -412,17 +412,24 @@ def filter_sessions_by_subject():
 def filter_sessions_by_date():
     print("\n===== FILTER BY DATE =====")
 
-    if not study_sessions:
-        print("No study sessions added yet.")
-        return
-
     date_to_find = input("Enter date (YYYY-MM-DD): ").strip()
 
-    matching_sessions = []
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
 
-    for session in study_sessions:
-        if session["date"] == date_to_find:
-            matching_sessions.append(session)
+    cursor.execute(
+        """
+        SELECT id, date, subject, topic, duration
+        FROM study_sessions
+        WHERE date = ?
+        ORDER BY id
+        """,
+        (date_to_find,)
+    )
+
+    matching_sessions = cursor.fetchall()
+
+    connection.close()
 
     if not matching_sessions:
         print(f"No study sessions found for {date_to_find}.")
@@ -431,12 +438,12 @@ def filter_sessions_by_date():
     for index, session in enumerate(matching_sessions, start=1):
         print(
             f"{index}. "
-            f"{session['date']} - "
-            f"{session['subject']} - "
-            f"{session['topic']} - "
-            f"{session['duration']} minutes"
+            f"{session[1]} - "
+            f"{session[2]} - "
+            f"{session[3]} - "
+            f"{session[4]} minutes"
         )
-
+        
 def view_sorted_sessions():
     print("\n===== SORT STUDY SESSIONS =====")
 
