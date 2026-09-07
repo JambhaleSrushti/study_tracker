@@ -262,28 +262,32 @@ def view_total_study_time():
         total_minutes = 0
 
     print(f"Total study time: {total_minutes} minutes")
-    
+
+
 def view_study_time_by_subject():
     print("\n===== STUDY TIME BY SUBJECT =====")
 
-    if not study_sessions:
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT subject, SUM(duration)
+        FROM study_sessions
+        GROUP BY subject
+        ORDER BY subject
+    """)
+
+    results = cursor.fetchall()
+
+    connection.close()
+
+    if not results:
         print("No study sessions added yet.")
         return
 
-    subject_totals = {}
-
-    for session in study_sessions:
-        subject = session["subject"]
-        duration = session["duration"]
-
-        if subject in subject_totals:
-            subject_totals[subject] += duration
-        else:
-            subject_totals[subject] = duration
-
-    for subject, total in subject_totals.items():
-        print(f"{subject}: {total} minutes")
-        
+    for subject, total_minutes in results:
+        print(f"{subject}: {total_minutes} minutes")
+                
 def view_daily_goal_progress():
     print("\n===== DAILY STUDY GOAL =====")
 
