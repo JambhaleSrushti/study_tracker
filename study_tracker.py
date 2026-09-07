@@ -569,31 +569,36 @@ def view_monthly_statistics():
 
     today = date.today()
 
-    monthly_sessions = []
+    month_start = today.replace(day=1)
 
-    for session in study_sessions:
-        session_date = date.fromisoformat(session["date"])
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
 
-        if (
-            session_date.year == today.year
-            and session_date.month == today.month
-        ):
-            monthly_sessions.append(session)
+    cursor.execute(
+        """
+        SELECT COUNT(*), COUNT(DISTINCT date), SUM(duration)
+        FROM study_sessions
+        WHERE date BETWEEN ? AND ?
+        """,
+        (
+            month_start.isoformat(),
+            today.isoformat()
+        )
+    )
 
-    if not monthly_sessions:
-        print("No study sessions found for this month.")
-        return
+    result = cursor.fetchone()
+    connection.close()
 
-    total_minutes = 0
-    study_days = set()
+    session_count = result[0]
+    study_days = result[1]
+    total_minutes = result[2]
 
-    for session in monthly_sessions:
-        total_minutes += session["duration"]
-        study_days.add(session["date"])
+    if total_minutes is None:
+        total_minutes = 0
 
     print(f"Month: {today.strftime('%B %Y')}")
-    print(f"Study sessions: {len(monthly_sessions)}")
-    print(f"Study days: {len(study_days)}")
+    print(f"Study sessions: {session_count}")
+    print(f"Study days: {study_days}")
     print(f"Total study time: {total_minutes} minutes")
 
 def edit_study_session():
