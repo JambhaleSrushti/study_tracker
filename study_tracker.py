@@ -532,32 +532,36 @@ def view_weekly_statistics():
     print("\n===== WEEKLY STATISTICS =====")
 
     today = date.today()
-
-    # Find Monday of the current week
     week_start = today - timedelta(days=today.weekday())
 
-    weekly_sessions = []
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
 
-    for session in study_sessions:
-        session_date = date.fromisoformat(session["date"])
+    cursor.execute(
+        """
+        SELECT COUNT(*), COUNT(DISTINCT date), SUM(duration)
+        FROM study_sessions
+        WHERE date BETWEEN ? AND ?
+        """,
+        (
+            week_start.isoformat(),
+            today.isoformat()
+        )
+    )
 
-        if week_start <= session_date <= today:
-            weekly_sessions.append(session)
+    result = cursor.fetchone()
+    connection.close()
 
-    if not weekly_sessions:
-        print("No study sessions found for this week.")
-        return
+    session_count = result[0]
+    study_days = result[1]
+    total_minutes = result[2]
 
-    total_minutes = 0
-    study_days = set()
-
-    for session in weekly_sessions:
-        total_minutes += session["duration"]
-        study_days.add(session["date"])
+    if total_minutes is None:
+        total_minutes = 0
 
     print(f"Week: {week_start} to {today}")
-    print(f"Study sessions: {len(weekly_sessions)}")
-    print(f"Study days: {len(study_days)}")
+    print(f"Study sessions: {session_count}")
+    print(f"Study days: {study_days}")
     print(f"Total study time: {total_minutes} minutes")
 
 def view_monthly_statistics():
