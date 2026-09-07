@@ -443,34 +443,43 @@ def filter_sessions_by_date():
             f"{session[3]} - "
             f"{session[4]} minutes"
         )
-        
+
 def view_sorted_sessions():
     print("\n===== SORT STUDY SESSIONS =====")
-
-    if not study_sessions:
-        print("No study sessions added yet.")
-        return
 
     print("1. Oldest first")
     print("2. Newest first")
 
     choice = input("Choose sort order: ").strip()
 
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
     if choice == "1":
-        sorted_sessions = sorted(
-            study_sessions,
-            key=lambda session: session["date"]
-        )
+        cursor.execute("""
+            SELECT id, date, subject, topic, duration
+            FROM study_sessions
+            ORDER BY date ASC, id ASC
+        """)
 
     elif choice == "2":
-        sorted_sessions = sorted(
-            study_sessions,
-            key=lambda session: session["date"],
-            reverse=True
-        )
+        cursor.execute("""
+            SELECT id, date, subject, topic, duration
+            FROM study_sessions
+            ORDER BY date DESC, id DESC
+        """)
 
     else:
         print("Invalid option.")
+        connection.close()
+        return
+
+    sorted_sessions = cursor.fetchall()
+
+    connection.close()
+
+    if not sorted_sessions:
+        print("No study sessions added yet.")
         return
 
     print("\n===== SORTED STUDY SESSIONS =====")
@@ -478,10 +487,10 @@ def view_sorted_sessions():
     for index, session in enumerate(sorted_sessions, start=1):
         print(
             f"{index}. "
-            f"{session['date']} - "
-            f"{session['subject']} - "
-            f"{session['topic']} - "
-            f"{session['duration']} minutes"
+            f"{session[1]} - "
+            f"{session[2]} - "
+            f"{session[3]} - "
+            f"{session[4]} minutes"
         )
 
 def search_sessions_by_topic():
