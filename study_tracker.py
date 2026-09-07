@@ -770,6 +770,30 @@ def set_daily_goal():
 
         print("Please enter a valid number of minutes.")
 
+def get_today_study_minutes():
+    today = date.today().isoformat()
+
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT SUM(duration)
+        FROM study_sessions
+        WHERE date = ?
+        """,
+        (today,)
+    )
+
+    total = cursor.fetchone()[0]
+
+    connection.close()
+
+    if total is None:
+        return 0
+
+    return total
+
 def main():
     while True:
         print("1. Add study session")

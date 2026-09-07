@@ -8,7 +8,10 @@ from study_tracker import (
     save_session_to_database,
     load_sessions_from_database,
     delete_session_by_id,
-    update_session_by_id
+    update_session_by_id,
+    load_daily_goal_from_database,
+    save_daily_goal_to_database,
+    get_today_study_minutes
 )
 
 def refresh_session_table():
@@ -59,6 +62,8 @@ def add_study_session():
 
     save_session_to_database(session)
     refresh_session_table()
+
+    refresh_daily_goal()
 
     messagebox.showinfo(
         "Success",
@@ -182,6 +187,51 @@ def save_changes():
         "Updated",
         "Study session updated successfully!"
     )
+def refresh_daily_goal():
+    goal = load_daily_goal_from_database()
+    today_minutes = get_today_study_minutes()
+
+    if goal is None:
+        goal_label.config(text="Daily goal: Not set")
+        progress_label.config(
+            text=f"Today's study: {today_minutes} minutes"
+        )
+        return
+
+    progress = (today_minutes / goal) * 100
+
+    goal_label.config(
+        text=f"Daily goal: {goal} minutes"
+    )
+
+    progress_label.config(
+        text=(
+            f"Today's study: {today_minutes} minutes "
+            f"({progress:.0f}%)"
+        )
+    )
+
+
+def update_daily_goal():
+    goal = goal_entry.get().strip()
+
+    if not goal.isdigit() or int(goal) <= 0:
+        messagebox.showerror(
+            "Invalid Input",
+            "Please enter a valid daily goal in minutes."
+        )
+        return
+
+    save_daily_goal_to_database(int(goal))
+
+    goal_entry.delete(0, tk.END)
+
+    refresh_daily_goal()
+
+    messagebox.showinfo(
+        "Success",
+        "Daily study goal updated!"
+    )
 
 window = tk.Tk()
 window.title("Study Tracker")
@@ -267,6 +317,70 @@ add_button = ttk.Button(
 )
 add_button.pack(pady=20)
 
+goal_frame = ttk.LabelFrame(
+    window,
+    text="Daily Goal"
+)
+
+goal_frame.pack(
+    padx=20,
+    pady=10,
+    fill="x"
+)
+
+
+goal_label = ttk.Label(
+    goal_frame,
+    text="Daily goal: Not set"
+)
+
+goal_label.grid(
+    row=0,
+    column=0,
+    padx=10,
+    pady=10
+)
+
+
+progress_label = ttk.Label(
+    goal_frame,
+    text="Today's study: 0 minutes"
+)
+
+progress_label.grid(
+    row=0,
+    column=1,
+    padx=10,
+    pady=10
+)
+
+
+goal_entry = ttk.Entry(
+    goal_frame,
+    width=12
+)
+
+goal_entry.grid(
+    row=1,
+    column=0,
+    padx=10,
+    pady=10
+)
+
+
+goal_button = ttk.Button(
+    goal_frame,
+    text="Set Daily Goal",
+    command=update_daily_goal
+)
+
+goal_button.grid(
+    row=1,
+    column=1,
+    padx=10,
+    pady=10
+)
+
 table_label = ttk.Label(
     window,
     text="Study Sessions",
@@ -335,5 +449,6 @@ save_changes_button.pack(pady=5)
 delete_button.pack(pady=10)
 
 refresh_session_table()
+refresh_daily_goal()
 
 window.mainloop()
