@@ -12,7 +12,11 @@ from study_tracker import (
     save_daily_goal_to_database,
     get_today_study_minutes,
     get_sessions_by_subject,
-    get_sessions_by_topic
+    get_sessions_by_topic,
+    get_total_study_minutes,
+    get_current_streak,
+    get_weekly_study_minutes,
+    get_monthly_study_minutes
 )
 
 
@@ -32,9 +36,20 @@ def home():
 
     if request.method == "POST":
 
-        subject = request.form.get("subject", "").strip().title()
-        topic = request.form.get("topic", "").strip()
-        duration = request.form.get("duration", "").strip()
+        subject = request.form.get(
+            "subject",
+            ""
+        ).strip().title()
+
+        topic = request.form.get(
+            "topic",
+            ""
+        ).strip()
+
+        duration = request.form.get(
+            "duration",
+            ""
+        ).strip()
 
         if (
             subject
@@ -87,7 +102,7 @@ def home():
 
 
     # -----------------------------------------------------
-    # BUILD TABLE ROWS
+    # BUILD STUDY SESSION TABLE
     # -----------------------------------------------------
 
     rows = ""
@@ -161,6 +176,22 @@ def home():
 
 
     # -----------------------------------------------------
+    # DASHBOARD STATISTICS
+    # -----------------------------------------------------
+
+    total_minutes = get_total_study_minutes()
+    current_streak = get_current_streak()
+    weekly_minutes = get_weekly_study_minutes()
+    monthly_minutes = get_monthly_study_minutes()
+
+    streak_word = (
+        "day"
+        if current_streak == 1
+        else "days"
+    )
+
+
+    # -----------------------------------------------------
     # PAGE HTML
     # -----------------------------------------------------
 
@@ -186,11 +217,62 @@ def home():
             <hr>
 
 
+            <h2>Study Summary</h2>
+
+            <table
+                border="1"
+                cellpadding="12"
+            >
+
+                <tr>
+                    <th>
+                        Total Study Time
+                    </th>
+
+                    <th>
+                        Current Streak
+                    </th>
+
+                    <th>
+                        This Week
+                    </th>
+
+                    <th>
+                        This Month
+                    </th>
+                </tr>
+
+                <tr>
+                    <td>
+                        {total_minutes} minutes
+                    </td>
+
+                    <td>
+                        {current_streak} {streak_word}
+                    </td>
+
+                    <td>
+                        {weekly_minutes} minutes
+                    </td>
+
+                    <td>
+                        {monthly_minutes} minutes
+                    </td>
+                </tr>
+
+            </table>
+
+
+            <hr>
+
+
             <h2>Add Study Session</h2>
 
             <form method="POST">
 
-                <label>Subject:</label>
+                <label>
+                    Subject:
+                </label>
 
                 <input
                     type="text"
@@ -201,7 +283,9 @@ def home():
                 <br><br>
 
 
-                <label>Topic:</label>
+                <label>
+                    Topic:
+                </label>
 
                 <input
                     type="text"
@@ -212,7 +296,9 @@ def home():
                 <br><br>
 
 
-                <label>Duration:</label>
+                <label>
+                    Duration:
+                </label>
 
                 <input
                     type="number"
@@ -447,7 +533,7 @@ def edit_session(session_id):
 
 
     # -----------------------------------------------------
-    # FIND SESSION
+    # FIND SELECTED SESSION
     # -----------------------------------------------------
 
     sessions = load_sessions_from_database()
