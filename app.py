@@ -7,7 +7,10 @@ from study_tracker import (
     load_sessions_from_database,
     save_session_to_database,
     delete_session_by_id,
-    update_session_by_id
+    update_session_by_id,
+    load_daily_goal_from_database,
+    save_daily_goal_to_database,
+    get_today_study_minutes
 )
 
 
@@ -21,9 +24,9 @@ app = Flask(__name__)
 @app.route("/", methods=["GET", "POST"])
 def home():
 
-    # -----------------------------------------
-    # ADD NEW STUDY SESSION
-    # -----------------------------------------
+    # -----------------------------------------------------
+    # ADD STUDY SESSION
+    # -----------------------------------------------------
 
     if request.method == "POST":
 
@@ -49,9 +52,9 @@ def home():
         return redirect("/")
 
 
-    # -----------------------------------------
-    # LOAD EXISTING SESSIONS
-    # -----------------------------------------
+    # -----------------------------------------------------
+    # LOAD STUDY SESSIONS
+    # -----------------------------------------------------
 
     sessions = load_sessions_from_database()
 
@@ -93,9 +96,38 @@ def home():
         """
 
 
-    # -----------------------------------------
-    # HOME PAGE HTML
-    # -----------------------------------------
+    # -----------------------------------------------------
+    # DAILY GOAL
+    # -----------------------------------------------------
+
+    daily_goal = load_daily_goal_from_database()
+    today_minutes = get_today_study_minutes()
+
+    if daily_goal is None:
+
+        goal_text = "Daily goal: Not set"
+
+        progress_text = (
+            f"Today's study: {today_minutes} minutes"
+        )
+
+    else:
+
+        progress = (today_minutes / daily_goal) * 100
+
+        goal_text = (
+            f"Daily goal: {daily_goal} minutes"
+        )
+
+        progress_text = (
+            f"Today's study: {today_minutes} minutes "
+            f"({progress:.0f}%)"
+        )
+
+
+    # -----------------------------------------------------
+    # PAGE HTML
+    # -----------------------------------------------------
 
     return f"""
     <!DOCTYPE html>
@@ -114,6 +146,9 @@ def home():
                 Track your study sessions,
                 goals, progress, and consistency.
             </p>
+
+
+            <hr>
 
 
             <h2>Add Study Session</h2>
@@ -161,6 +196,46 @@ def home():
             </form>
 
 
+            <hr>
+
+
+            <h2>Daily Goal</h2>
+
+            <p>
+                {goal_text}
+            </p>
+
+            <p>
+                {progress_text}
+            </p>
+
+
+            <form
+                method="POST"
+                action="/goal"
+            >
+
+                <label>
+                    New daily goal:
+                </label>
+
+                <input
+                    type="number"
+                    name="goal"
+                    min="1"
+                    required
+                >
+
+                <button type="submit">
+                    Set Daily Goal
+                </button>
+
+            </form>
+
+
+            <hr>
+
+
             <h2>Study Sessions</h2>
 
             <table
@@ -184,6 +259,30 @@ def home():
 
     </html>
     """
+
+
+# =========================================================
+# SET DAILY GOAL
+# =========================================================
+
+@app.route(
+    "/goal",
+    methods=["POST"]
+)
+def set_daily_goal():
+
+    goal = request.form.get(
+        "goal",
+        ""
+    ).strip()
+
+    if goal.isdigit() and int(goal) > 0:
+
+        save_daily_goal_to_database(
+            int(goal)
+        )
+
+    return redirect("/")
 
 
 # =========================================================
@@ -211,15 +310,26 @@ def delete_session(session_id):
 )
 def edit_session(session_id):
 
-    # -----------------------------------------
-    # SAVE EDITED SESSION
-    # -----------------------------------------
+    # -----------------------------------------------------
+    # SAVE CHANGES
+    # -----------------------------------------------------
 
     if request.method == "POST":
 
-        subject = request.form.get("subject", "").strip().title()
-        topic = request.form.get("topic", "").strip()
-        duration = request.form.get("duration", "").strip()
+        subject = request.form.get(
+            "subject",
+            ""
+        ).strip().title()
+
+        topic = request.form.get(
+            "topic",
+            ""
+        ).strip()
+
+        duration = request.form.get(
+            "duration",
+            ""
+        ).strip()
 
         if (
             subject
@@ -238,9 +348,9 @@ def edit_session(session_id):
             return redirect("/")
 
 
-    # -----------------------------------------
-    # FIND SELECTED SESSION
-    # -----------------------------------------
+    # -----------------------------------------------------
+    # FIND SESSION
+    # -----------------------------------------------------
 
     sessions = load_sessions_from_database()
 
@@ -249,11 +359,14 @@ def edit_session(session_id):
     for session in sessions:
 
         if session[0] == session_id:
+
             selected_session = session
+
             break
 
 
     if selected_session is None:
+
         return "Study session not found."
 
 
@@ -262,9 +375,9 @@ def edit_session(session_id):
     duration = selected_session[4]
 
 
-    # -----------------------------------------
-    # EDIT PAGE HTML
-    # -----------------------------------------
+    # -----------------------------------------------------
+    # EDIT PAGE
+    # -----------------------------------------------------
 
     return f"""
     <!DOCTYPE html>
