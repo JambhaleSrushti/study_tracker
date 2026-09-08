@@ -10,7 +10,9 @@ from study_tracker import (
     update_session_by_id,
     load_daily_goal_from_database,
     save_daily_goal_to_database,
-    get_today_study_minutes
+    get_today_study_minutes,
+    get_sessions_by_subject,
+    get_sessions_by_topic
 )
 
 
@@ -53,10 +55,40 @@ def home():
 
 
     # -----------------------------------------------------
-    # LOAD STUDY SESSIONS
+    # SEARCH / FILTER
     # -----------------------------------------------------
 
-    sessions = load_sessions_from_database()
+    subject_filter = request.args.get(
+        "subject",
+        ""
+    ).strip().title()
+
+    topic_search = request.args.get(
+        "topic",
+        ""
+    ).strip()
+
+
+    if subject_filter:
+
+        sessions = get_sessions_by_subject(
+            subject_filter
+        )
+
+    elif topic_search:
+
+        sessions = get_sessions_by_topic(
+            topic_search
+        )
+
+    else:
+
+        sessions = load_sessions_from_database()
+
+
+    # -----------------------------------------------------
+    # BUILD TABLE ROWS
+    # -----------------------------------------------------
 
     rows = ""
 
@@ -103,6 +135,7 @@ def home():
     daily_goal = load_daily_goal_from_database()
     today_minutes = get_today_study_minutes()
 
+
     if daily_goal is None:
 
         goal_text = "Daily goal: Not set"
@@ -113,7 +146,9 @@ def home():
 
     else:
 
-        progress = (today_minutes / daily_goal) * 100
+        progress = (
+            today_minutes / daily_goal
+        ) * 100
 
         goal_text = (
             f"Daily goal: {daily_goal} minutes"
@@ -236,6 +271,65 @@ def home():
             <hr>
 
 
+            <h2>Search & Filter</h2>
+
+
+            <form
+                method="GET"
+                action="/"
+            >
+
+                <label>
+                    Subject:
+                </label>
+
+                <input
+                    type="text"
+                    name="subject"
+                >
+
+                <button type="submit">
+                    Filter Subject
+                </button>
+
+            </form>
+
+
+            <br>
+
+
+            <form
+                method="GET"
+                action="/"
+            >
+
+                <label>
+                    Topic:
+                </label>
+
+                <input
+                    type="text"
+                    name="topic"
+                >
+
+                <button type="submit">
+                    Search Topic
+                </button>
+
+            </form>
+
+
+            <br>
+
+
+            <a href="/">
+                Show All Sessions
+            </a>
+
+
+            <hr>
+
+
             <h2>Study Sessions</h2>
 
             <table
@@ -276,8 +370,10 @@ def set_daily_goal():
         ""
     ).strip()
 
-    if goal.isdigit() and int(goal) > 0:
-
+    if (
+        goal.isdigit()
+        and int(goal) > 0
+    ):
         save_daily_goal_to_database(
             int(goal)
         )
@@ -295,7 +391,9 @@ def set_daily_goal():
 )
 def delete_session(session_id):
 
-    delete_session_by_id(session_id)
+    delete_session_by_id(
+        session_id
+    )
 
     return redirect("/")
 
@@ -395,7 +493,9 @@ def edit_session(session_id):
 
             <form method="POST">
 
-                <label>Subject:</label>
+                <label>
+                    Subject:
+                </label>
 
                 <input
                     type="text"
@@ -407,7 +507,9 @@ def edit_session(session_id):
                 <br><br>
 
 
-                <label>Topic:</label>
+                <label>
+                    Topic:
+                </label>
 
                 <input
                     type="text"
@@ -419,7 +521,9 @@ def edit_session(session_id):
                 <br><br>
 
 
-                <label>Duration:</label>
+                <label>
+                    Duration:
+                </label>
 
                 <input
                     type="number"
