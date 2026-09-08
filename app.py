@@ -6,7 +6,8 @@ from study_tracker import (
     initialize_database,
     load_sessions_from_database,
     save_session_to_database,
-    delete_session_by_id
+    delete_session_by_id,
+    update_session_by_id
 )
 
 
@@ -36,7 +37,6 @@ def home():
             and duration.isdigit()
             and int(duration) > 0
         ):
-
             session = {
                 "date": date.today().isoformat(),
                 "subject": subject,
@@ -73,9 +73,16 @@ def home():
             <td>{duration}</td>
 
             <td>
+                <a href="/edit/{session_id}">
+                    Edit
+                </a>
+
+                &nbsp;
+
                 <form
                     method="POST"
                     action="/delete/{session_id}"
+                    style="display:inline;"
                 >
                     <button type="submit">
                         Delete
@@ -87,7 +94,7 @@ def home():
 
 
     # -----------------------------------------
-    # PAGE HTML
+    # HOME PAGE HTML
     # -----------------------------------------
 
     return f"""
@@ -166,7 +173,7 @@ def home():
                     <th>Subject</th>
                     <th>Topic</th>
                     <th>Duration</th>
-                    <th>Action</th>
+                    <th>Actions</th>
                 </tr>
 
                 {rows}
@@ -192,6 +199,142 @@ def delete_session(session_id):
     delete_session_by_id(session_id)
 
     return redirect("/")
+
+
+# =========================================================
+# EDIT SESSION
+# =========================================================
+
+@app.route(
+    "/edit/<int:session_id>",
+    methods=["GET", "POST"]
+)
+def edit_session(session_id):
+
+    # -----------------------------------------
+    # SAVE EDITED SESSION
+    # -----------------------------------------
+
+    if request.method == "POST":
+
+        subject = request.form.get("subject", "").strip().title()
+        topic = request.form.get("topic", "").strip()
+        duration = request.form.get("duration", "").strip()
+
+        if (
+            subject
+            and topic
+            and duration.isdigit()
+            and int(duration) > 0
+        ):
+
+            update_session_by_id(
+                session_id,
+                subject,
+                topic,
+                int(duration)
+            )
+
+            return redirect("/")
+
+
+    # -----------------------------------------
+    # FIND SELECTED SESSION
+    # -----------------------------------------
+
+    sessions = load_sessions_from_database()
+
+    selected_session = None
+
+    for session in sessions:
+
+        if session[0] == session_id:
+            selected_session = session
+            break
+
+
+    if selected_session is None:
+        return "Study session not found."
+
+
+    subject = selected_session[2]
+    topic = selected_session[3]
+    duration = selected_session[4]
+
+
+    # -----------------------------------------
+    # EDIT PAGE HTML
+    # -----------------------------------------
+
+    return f"""
+    <!DOCTYPE html>
+
+    <html>
+
+        <head>
+            <title>Edit Study Session</title>
+        </head>
+
+        <body>
+
+            <h1>Edit Study Session</h1>
+
+
+            <form method="POST">
+
+                <label>Subject:</label>
+
+                <input
+                    type="text"
+                    name="subject"
+                    value="{subject}"
+                    required
+                >
+
+                <br><br>
+
+
+                <label>Topic:</label>
+
+                <input
+                    type="text"
+                    name="topic"
+                    value="{topic}"
+                    required
+                >
+
+                <br><br>
+
+
+                <label>Duration:</label>
+
+                <input
+                    type="number"
+                    name="duration"
+                    value="{duration}"
+                    min="1"
+                    required
+                >
+
+                <br><br>
+
+
+                <button type="submit">
+                    Save Changes
+                </button>
+
+                &nbsp;
+
+                <a href="/">
+                    Cancel
+                </a>
+
+            </form>
+
+        </body>
+
+    </html>
+    """
 
 
 # =========================================================
