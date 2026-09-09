@@ -1,6 +1,12 @@
 from datetime import date
 
-from flask import Flask, request, redirect
+from flask import (
+    Flask,
+    request,
+    redirect,
+    render_template,
+    url_for
+)
 
 from study_tracker import (
     initialize_database,
@@ -8,15 +14,17 @@ from study_tracker import (
     save_session_to_database,
     delete_session_by_id,
     update_session_by_id,
-    load_daily_goal_from_database,
-    save_daily_goal_to_database,
     get_today_study_minutes,
     get_sessions_by_subject,
     get_sessions_by_topic,
     get_total_study_minutes,
     get_current_streak,
     get_weekly_study_minutes,
-    get_monthly_study_minutes
+    get_monthly_study_minutes,
+    get_subjects,
+    add_subject,
+    update_subject_goal,
+    delete_subject
 )
 
 
@@ -27,8 +35,13 @@ app = Flask(__name__)
 # HOME PAGE
 # =========================================================
 
-@app.route("/", methods=["GET", "POST"])
+@app.route(
+    "/",
+    methods=["GET", "POST"]
+)
 def home():
+
+    subjects = get_subjects()
 
     # -----------------------------------------------------
     # ADD STUDY SESSION
@@ -39,7 +52,7 @@ def home():
         subject = request.form.get(
             "subject",
             ""
-        ).strip().title()
+        ).strip()
 
         topic = request.form.get(
             "topic",
@@ -51,12 +64,18 @@ def home():
             ""
         ).strip()
 
+        available_subjects = {
+            item[1]
+            for item in subjects
+        }
+
         if (
-            subject
+            subject in available_subjects
             and topic
             and duration.isdigit()
             and int(duration) > 0
         ):
+
             session = {
                 "date": date.today().isoformat(),
                 "subject": subject,
@@ -64,9 +83,13 @@ def home():
                 "duration": int(duration)
             }
 
-            save_session_to_database(session)
+            save_session_to_database(
+                session
+            )
 
-        return redirect("/")
+        return redirect(
+            url_for("home")
+        )
 
 
     # -----------------------------------------------------
@@ -76,7 +99,7 @@ def home():
     subject_filter = request.args.get(
         "subject",
         ""
-    ).strip().title()
+    ).strip()
 
     topic_search = request.args.get(
         "topic",
@@ -102,354 +125,102 @@ def home():
 
 
     # -----------------------------------------------------
-    # BUILD STUDY SESSION TABLE
+    # SUBJECT-WISE DAILY GOALS
     # -----------------------------------------------------
 
-    rows = ""
+    total_daily_goal = sum(
+        subject[2] or 0
+        for subject in subjects
+    )
 
-    for session in sessions:
-
-        session_id = session[0]
-        session_date = session[1]
-        subject = session[2]
-        topic = session[3]
-        duration = session[4]
-
-        rows += f"""
-        <tr>
-            <td>{session_date}</td>
-            <td>{subject}</td>
-            <td>{topic}</td>
-            <td>{duration}</td>
-
-            <td>
-                <a href="/edit/{session_id}">
-                    Edit
-                </a>
-
-                &nbsp;
-
-                <form
-                    method="POST"
-                    action="/delete/{session_id}"
-                    style="display:inline;"
-                >
-                    <button type="submit">
-                        Delete
-                    </button>
-                </form>
-            </td>
-        </tr>
-        """
-
-
-    # -----------------------------------------------------
-    # DAILY GOAL
-    # -----------------------------------------------------
-
-    daily_goal = load_daily_goal_from_database()
     today_minutes = get_today_study_minutes()
 
+    overall_progress = None
 
-    if daily_goal is None:
+    if total_daily_goal > 0:
 
-        goal_text = "Daily goal: Not set"
-
-        progress_text = (
-            f"Today's study: {today_minutes} minutes"
-        )
-
-    else:
-
-        progress = (
-            today_minutes / daily_goal
+        overall_progress = (
+            today_minutes
+            / total_daily_goal
         ) * 100
 
-        goal_text = (
-            f"Daily goal: {daily_goal} minutes"
-        )
-
-        progress_text = (
-            f"Today's study: {today_minutes} minutes "
-            f"({progress:.0f}%)"
-        )
-
 
     # -----------------------------------------------------
-    # DASHBOARD STATISTICS
+    # STATISTICS
     # -----------------------------------------------------
 
-    total_minutes = get_total_study_minutes()
-    current_streak = get_current_streak()
-    weekly_minutes = get_weekly_study_minutes()
-    monthly_minutes = get_monthly_study_minutes()
+    total_minutes = (
+        get_total_study_minutes()
+    )
 
-    streak_word = (
-        "day"
-        if current_streak == 1
-        else "days"
+    current_streak = (
+        get_current_streak()
+    )
+
+    weekly_minutes = (
+        get_weekly_study_minutes()
+    )
+
+    monthly_minutes = (
+        get_monthly_study_minutes()
     )
 
 
     # -----------------------------------------------------
-    # PAGE HTML
+    # RENDER PAGE
     # -----------------------------------------------------
 
-    return f"""
-    <!DOCTYPE html>
-
-    <html>
-
-        <head>
-            <title>Study Tracker</title>
-        </head>
-
-        <body>
-
-            <h1>Study Tracker</h1>
-
-            <p>
-                Track your study sessions,
-                goals, progress, and consistency.
-            </p>
-
-
-            <hr>
-
-
-            <h2>Study Summary</h2>
-
-            <table
-                border="1"
-                cellpadding="12"
-            >
-
-                <tr>
-                    <th>
-                        Total Study Time
-                    </th>
-
-                    <th>
-                        Current Streak
-                    </th>
-
-                    <th>
-                        This Week
-                    </th>
-
-                    <th>
-                        This Month
-                    </th>
-                </tr>
-
-                <tr>
-                    <td>
-                        {total_minutes} minutes
-                    </td>
-
-                    <td>
-                        {current_streak} {streak_word}
-                    </td>
-
-                    <td>
-                        {weekly_minutes} minutes
-                    </td>
-
-                    <td>
-                        {monthly_minutes} minutes
-                    </td>
-                </tr>
-
-            </table>
-
-
-            <hr>
-
-
-            <h2>Add Study Session</h2>
-
-            <form method="POST">
-
-                <label>
-                    Subject:
-                </label>
-
-                <input
-                    type="text"
-                    name="subject"
-                    required
-                >
-
-                <br><br>
-
-
-                <label>
-                    Topic:
-                </label>
-
-                <input
-                    type="text"
-                    name="topic"
-                    required
-                >
-
-                <br><br>
-
-
-                <label>
-                    Duration:
-                </label>
-
-                <input
-                    type="number"
-                    name="duration"
-                    min="1"
-                    required
-                >
-
-                <br><br>
-
-
-                <button type="submit">
-                    Add Study Session
-                </button>
-
-            </form>
-
-
-            <hr>
-
-
-            <h2>Daily Goal</h2>
-
-            <p>
-                {goal_text}
-            </p>
-
-            <p>
-                {progress_text}
-            </p>
-
-
-            <form
-                method="POST"
-                action="/goal"
-            >
-
-                <label>
-                    New daily goal:
-                </label>
-
-                <input
-                    type="number"
-                    name="goal"
-                    min="1"
-                    required
-                >
-
-                <button type="submit">
-                    Set Daily Goal
-                </button>
-
-            </form>
-
-
-            <hr>
-
-
-            <h2>Search & Filter</h2>
-
-
-            <form
-                method="GET"
-                action="/"
-            >
-
-                <label>
-                    Subject:
-                </label>
-
-                <input
-                    type="text"
-                    name="subject"
-                >
-
-                <button type="submit">
-                    Filter Subject
-                </button>
-
-            </form>
-
-
-            <br>
-
-
-            <form
-                method="GET"
-                action="/"
-            >
-
-                <label>
-                    Topic:
-                </label>
-
-                <input
-                    type="text"
-                    name="topic"
-                >
-
-                <button type="submit">
-                    Search Topic
-                </button>
-
-            </form>
-
-
-            <br>
-
-
-            <a href="/">
-                Show All Sessions
-            </a>
-
-
-            <hr>
-
-
-            <h2>Study Sessions</h2>
-
-            <table
-                border="1"
-                cellpadding="8"
-            >
-
-                <tr>
-                    <th>Date</th>
-                    <th>Subject</th>
-                    <th>Topic</th>
-                    <th>Duration</th>
-                    <th>Actions</th>
-                </tr>
-
-                {rows}
-
-            </table>
-
-        </body>
-
-    </html>
-    """
+    return render_template(
+        "index.html",
+        sessions=sessions,
+        subjects=subjects,
+        total_daily_goal=total_daily_goal,
+        today_minutes=today_minutes,
+        overall_progress=overall_progress,
+        total_minutes=total_minutes,
+        current_streak=current_streak,
+        weekly_minutes=weekly_minutes,
+        monthly_minutes=monthly_minutes,
+        subject_filter=subject_filter,
+        topic_search=topic_search
+    )
 
 
 # =========================================================
-# SET DAILY GOAL
+# ADD SUBJECT
 # =========================================================
 
 @app.route(
-    "/goal",
+    "/subjects/add",
     methods=["POST"]
 )
-def set_daily_goal():
+def create_subject():
+
+    name = request.form.get(
+        "subject_name",
+        ""
+    ).strip().title()
+
+    if name:
+
+        add_subject(
+            name
+        )
+
+    return redirect(
+        url_for("home")
+    )
+
+
+# =========================================================
+# UPDATE SUBJECT DAILY GOAL
+# =========================================================
+
+@app.route(
+    "/subjects/<int:subject_id>/goal",
+    methods=["POST"]
+)
+def change_subject_goal(subject_id):
 
     goal = request.form.get(
         "goal",
@@ -458,17 +229,40 @@ def set_daily_goal():
 
     if (
         goal.isdigit()
-        and int(goal) > 0
+        and int(goal) >= 0
     ):
-        save_daily_goal_to_database(
+
+        update_subject_goal(
+            subject_id,
             int(goal)
         )
 
-    return redirect("/")
+    return redirect(
+        url_for("home")
+    )
 
 
 # =========================================================
-# DELETE SESSION
+# REMOVE MANAGED SUBJECT
+# =========================================================
+
+@app.route(
+    "/subjects/<int:subject_id>/delete",
+    methods=["POST"]
+)
+def remove_subject(subject_id):
+
+    delete_subject(
+        subject_id
+    )
+
+    return redirect(
+        url_for("home")
+    )
+
+
+# =========================================================
+# DELETE STUDY SESSION
 # =========================================================
 
 @app.route(
@@ -481,11 +275,13 @@ def delete_session(session_id):
         session_id
     )
 
-    return redirect("/")
+    return redirect(
+        url_for("home")
+    )
 
 
 # =========================================================
-# EDIT SESSION
+# EDIT STUDY SESSION
 # =========================================================
 
 @app.route(
@@ -494,16 +290,54 @@ def delete_session(session_id):
 )
 def edit_session(session_id):
 
-    # -----------------------------------------------------
-    # SAVE CHANGES
-    # -----------------------------------------------------
+    sessions = (
+        load_sessions_from_database()
+    )
+
+    selected_session = None
+
+    for session in sessions:
+
+        if session[0] == session_id:
+
+            selected_session = session
+            break
+
+
+    if selected_session is None:
+
+        return (
+            "Study session not found.",
+            404
+        )
+
+
+    subjects = get_subjects()
+
+    managed_subject_names = {
+        subject[1]
+        for subject in subjects
+    }
+
+
+    # Allow the historical subject to remain
+    # selectable even if it was removed from
+    # the managed subjects list.
+    allowed_subjects = set(
+        managed_subject_names
+    )
+
+    allowed_subjects.add(
+        selected_session[2]
+    )
+
 
     if request.method == "POST":
 
         subject = request.form.get(
             "subject",
             ""
-        ).strip().title()
+        ).strip()
 
         topic = request.form.get(
             "topic",
@@ -516,7 +350,7 @@ def edit_session(session_id):
         ).strip()
 
         if (
-            subject
+            subject in allowed_subjects
             and topic
             and duration.isdigit()
             and int(duration) > 0
@@ -529,115 +363,17 @@ def edit_session(session_id):
                 int(duration)
             )
 
-            return redirect("/")
+            return redirect(
+                url_for("home")
+            )
 
 
-    # -----------------------------------------------------
-    # FIND SELECTED SESSION
-    # -----------------------------------------------------
-
-    sessions = load_sessions_from_database()
-
-    selected_session = None
-
-    for session in sessions:
-
-        if session[0] == session_id:
-
-            selected_session = session
-
-            break
-
-
-    if selected_session is None:
-
-        return "Study session not found."
-
-
-    subject = selected_session[2]
-    topic = selected_session[3]
-    duration = selected_session[4]
-
-
-    # -----------------------------------------------------
-    # EDIT PAGE
-    # -----------------------------------------------------
-
-    return f"""
-    <!DOCTYPE html>
-
-    <html>
-
-        <head>
-            <title>Edit Study Session</title>
-        </head>
-
-        <body>
-
-            <h1>Edit Study Session</h1>
-
-
-            <form method="POST">
-
-                <label>
-                    Subject:
-                </label>
-
-                <input
-                    type="text"
-                    name="subject"
-                    value="{subject}"
-                    required
-                >
-
-                <br><br>
-
-
-                <label>
-                    Topic:
-                </label>
-
-                <input
-                    type="text"
-                    name="topic"
-                    value="{topic}"
-                    required
-                >
-
-                <br><br>
-
-
-                <label>
-                    Duration:
-                </label>
-
-                <input
-                    type="number"
-                    name="duration"
-                    value="{duration}"
-                    min="1"
-                    required
-                >
-
-                <br><br>
-
-
-                <button type="submit">
-                    Save Changes
-                </button>
-
-                &nbsp;
-
-                <a href="/">
-                    Cancel
-                </a>
-
-            </form>
-
-        </body>
-
-    </html>
-    """
+    return render_template(
+        "edit.html",
+        session=selected_session,
+        subjects=subjects,
+        managed_subject_names=managed_subject_names
+    )
 
 
 # =========================================================
@@ -648,4 +384,6 @@ if __name__ == "__main__":
 
     initialize_database()
 
-    app.run(debug=True)
+    app.run(
+        debug=True
+    )

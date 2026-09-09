@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Study Tracker
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+    <!-- ================================================= -->
+    <!-- HEADER -->
+    <!-- ================================================= -->
+
+    <header class="page-header">
+
+        <h1>
+            Study Tracker
+        </h1>
+
+        <p>
+            Track your study sessions,
+            subjects, goals, progress,
+            and consistency.
+        </p>
+
+    </header>
+
+
+    <!-- ================================================= -->
+    <!-- STUDY SUMMARY -->
+    <!-- ================================================= -->
+
+    <section>
+
+        <h2>
+            Study Summary
+        </h2>
+
+
+        <div class="stats-grid">
+
+
+            <div class="stat-card">
+
+                <span class="stat-title">
+                    Total Study Time
+                </span>
+
+                <strong>
+                    {{ total_minutes }} min
+                </strong>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <span class="stat-title">
+                    Current Streak
+                </span>
+
+                <strong>
+
+                    {{ current_streak }}
+
+                    {% if current_streak == 1 %}
+
+                        day
+
+                    {% else %}
+
+                        days
+
+                    {% endif %}
+
+                </strong>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <span class="stat-title">
+                    This Week
+                </span>
+
+                <strong>
+                    {{ weekly_minutes }} min
+                </strong>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <span class="stat-title">
+                    This Month
+                </span>
+
+                <strong>
+                    {{ monthly_minutes }} min
+                </strong>
+
+            </div>
+
+
+        </div>
+
+    </section>
+
+
+    <!-- ================================================= -->
+    <!-- MY SUBJECTS -->
+    <!-- ================================================= -->
+
+    <section class="card">
+
+
+        <div class="section-heading">
+
+            <div>
+
+                <h2>
+                    My Subjects & Daily Goals
+                </h2>
+
+                <p class="section-description">
+                    Choose the subjects you are studying
+                    and set a daily target for each one.
+                </p>
+
+            </div>
+
+
+            <span>
+                {{ subjects|length }}
+                subject(s)
+            </span>
+
+        </div>
+
+
+        <div class="daily-total">
+
+
+            <div>
+
+                <span class="summary-label">
+                    Total daily target
+                </span>
+
+                <strong>
+                    {{ total_daily_goal }}
+                    minutes
+                </strong>
+
+            </div>
+
+
+            <div>
+
+                <span class="summary-label">
+                    Today's study
+                </span>
+
+                <strong>
+                    {{ today_minutes }}
+                    minutes
+                </strong>
+
+            </div>
+
+
+            <div>
+
+                <span class="summary-label">
+                    Overall progress
+                </span>
+
+                <strong>
+
+                    {% if overall_progress is not none %}
+
+                        {{ "%.0f"|format(overall_progress) }}%
+
+                    {% else %}
+
+                        No goal set
+
+                    {% endif %}
+
+                </strong>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- ADD SUBJECT -->
+
+        <form
+            method="POST"
+            action="{{ url_for('create_subject') }}"
+            class="add-subject-form"
+        >
+
+
+            <div>
+
+                <label for="subject-name">
+                    Add a subject
+                </label>
+
+                <input
+                    id="subject-name"
+                    type="text"
+                    name="subject_name"
+                    placeholder="e.g. Physics"
+                    required
+                >
+
+            </div>
+
+
+            <button type="submit">
+                + Add Subject
+            </button>
+
+
+        </form>
+
+
+        {% if subjects %}
+
+
+            <div class="table-wrapper">
+
+                <table class="subject-table">
+
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Subject
+                            </th>
+
+                            <th>
+                                Daily Goal
+                            </th>
+
+                            <th>
+                                Action
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+
+                    {% for subject in subjects %}
+
+
+                        <tr>
+
+
+                            <td>
+
+                                <strong>
+                                    {{ subject[1] }}
+                                </strong>
+
+                            </td>
+
+
+                            <td>
+
+
+                                <form
+                                    method="POST"
+                                    action="{{ url_for(
+                                        'change_subject_goal',
+                                        subject_id=subject[0]
+                                    ) }}"
+                                    class="subject-goal-form"
+                                >
+
+
+                                    <input
+                                        type="number"
+                                        name="goal"
+                                        value="{{ subject[2] }}"
+                                        min="0"
+                                        required
+                                    >
+
+
+                                    <span>
+                                        min/day
+                                    </span>
+
+
+                                    <button type="submit">
+                                        Update
+                                    </button>
+
+
+                                </form>
+
+
+                            </td>
+
+
+                            <td>
+
+
+                                <form
+                                    method="POST"
+                                    action="{{ url_for(
+                                        'remove_subject',
+                                        subject_id=subject[0]
+                                    ) }}"
+                                >
+
+
+                                    <button
+                                        type="submit"
+                                        class="delete-button"
+                                    >
+                                        Remove
+                                    </button>
+
+
+                                </form>
+
+
+                            </td>
+
+
+                        </tr>
+
+
+                    {% endfor %}
+
+
+                    </tbody>
+
+
+                </table>
+
+            </div>
+
+
+            <p class="help-text">
+
+                Removing a subject only removes it
+                from your current subject list.
+                Historical study sessions are preserved.
+
+            </p>
+
+
+        {% else %}
+
+
+            <div class="empty-state">
+
+                No subjects yet.
+                Add your first subject above.
+
+            </div>
+
+
+        {% endif %}
+
+
+    </section>
+
+
+    <!-- ================================================= -->
+    <!-- ADD STUDY SESSION -->
+    <!-- ================================================= -->
+
+    <section class="card">
+
+
+        <h2>
+            Add Study Session
+        </h2>
+
+
+        {% if subjects %}
+
+
+            <form
+                method="POST"
+                class="form-grid"
+            >
+
+
+                <div>
+
+                    <label for="subject">
+                        Subject
+                    </label>
+
+
+                    <select
+                        id="subject"
+                        name="subject"
+                        required
+                    >
+
+                        <option value="">
+                            Choose a subject
+                        </option>
+
+
+                        {% for subject in subjects %}
+
+                            <option
+                                value="{{ subject[1] }}"
+                            >
+
+                                {{ subject[1] }}
+
+                            </option>
+
+                        {% endfor %}
+
+
+                    </select>
+
+                </div>
+
+
+                <div>
+
+                    <label for="topic">
+                        Topic
+                    </label>
+
+                    <input
+                        id="topic"
+                        type="text"
+                        name="topic"
+                        placeholder="e.g. Wave Optics"
+                        required
+                    >
+
+                </div>
+
+
+                <div>
+
+                    <label for="duration">
+                        Duration (minutes)
+                    </label>
+
+                    <input
+                        id="duration"
+                        type="number"
+                        name="duration"
+                        min="1"
+                        placeholder="60"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-button">
+
+                    <button type="submit">
+                        Add Study Session
+                    </button>
+
+                </div>
+
+
+            </form>
+
+
+        {% else %}
+
+
+            <div class="empty-state">
+
+                Add at least one subject first.
+                Your subjects will then appear
+                in this dropdown.
+
+            </div>
+
+
+        {% endif %}
+
+
+    </section>
+
+
+    <!-- ================================================= -->
+    <!-- SEARCH & FILTER -->
+    <!-- ================================================= -->
+
+    <section class="card">
+
+
+        <h2>
+            Search & Filter
+        </h2>
+
+
+        <div class="filter-grid">
+
+
+            <form
+                method="GET"
+                action="{{ url_for('home') }}"
+            >
+
+
+                <label for="filter-subject">
+                    Subject
+                </label>
+
+
+                <div class="inline-form">
+
+
+                    <select
+                        id="filter-subject"
+                        name="subject"
+                    >
+
+
+                        <option value="">
+                            All subjects
+                        </option>
+
+
+                        {% for subject in subjects %}
+
+
+                            <option
+                                value="{{ subject[1] }}"
+
+                                {% if subject_filter == subject[1] %}
+
+                                    selected
+
+                                {% endif %}
+                            >
+
+                                {{ subject[1] }}
+
+                            </option>
+
+
+                        {% endfor %}
+
+
+                    </select>
+
+
+                    <button type="submit">
+                        Filter
+                    </button>
+
+
+                </div>
+
+
+            </form>
+
+
+            <form
+                method="GET"
+                action="{{ url_for('home') }}"
+            >
+
+
+                <label for="filter-topic">
+                    Topic
+                </label>
+
+
+                <div class="inline-form">
+
+
+                    <input
+                        id="filter-topic"
+                        type="text"
+                        name="topic"
+                        value="{{ topic_search }}"
+                        placeholder="e.g. Optics"
+                    >
+
+
+                    <button type="submit">
+                        Search
+                    </button>
+
+
+                </div>
+
+
+            </form>
+
+
+        </div>
+
+
+        <a
+            class="secondary-link"
+            href="{{ url_for('home') }}"
+        >
+            Show All Sessions
+        </a>
+
+
+    </section>
+
+
+    <!-- ================================================= -->
+    <!-- STUDY SESSIONS -->
+    <!-- ================================================= -->
+
+    <section class="card">
+
+
+        <div class="section-heading">
+
+
+            <h2>
+                Study Sessions
+            </h2>
+
+
+            <span>
+                {{ sessions|length }}
+                session(s)
+            </span>
+
+
+        </div>
+
+
+        <div class="table-wrapper">
+
+
+            <table>
+
+
+                <thead>
+
+
+                    <tr>
+
+                        <th>
+                            Date
+                        </th>
+
+                        <th>
+                            Subject
+                        </th>
+
+                        <th>
+                            Topic
+                        </th>
+
+                        <th>
+                            Duration
+                        </th>
+
+                        <th>
+                            Actions
+                        </th>
+
+                    </tr>
+
+
+                </thead>
+
+
+                <tbody>
+
+
+                {% for session in sessions %}
+
+
+                    <tr>
+
+
+                        <td>
+                            {{ session[1] }}
+                        </td>
+
+
+                        <td>
+                            {{ session[2] }}
+                        </td>
+
+
+                        <td>
+                            {{ session[3] }}
+                        </td>
+
+
+                        <td>
+                            {{ session[4] }}
+                            min
+                        </td>
+
+
+                        <td class="actions">
+
+
+                            <a
+                                class="edit-link"
+                                href="{{ url_for(
+                                    'edit_session',
+                                    session_id=session[0]
+                                ) }}"
+                            >
+                                Edit
+                            </a>
+
+
+                            <form
+                                method="POST"
+                                action="{{ url_for(
+                                    'delete_session',
+                                    session_id=session[0]
+                                ) }}"
+                            >
+
+
+                                <button
+                                    type="submit"
+                                    class="delete-button"
+                                >
+                                    Delete
+                                </button>
+
+
+                            </form>
+
+
+                        </td>
+
+
+                    </tr>
+
+
+                {% else %}
+
+
+                    <tr>
+
+                        <td
+                            colspan="5"
+                            class="empty-message"
+                        >
+
+                            No study sessions found.
+
+                        </td>
+
+                    </tr>
+
+
+                {% endfor %}
+
+
+                </tbody>
+
+
+            </table>
+
+
+        </div>
+
+
+    </section>
+
+
+</div>
+
+
+</body>
+
+</html>

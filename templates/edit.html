@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Edit Study Session
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+
+<div class="small-container">
+
+
+    <section class="card">
+
+
+        <h1>
+            Edit Study Session
+        </h1>
+
+
+        <p class="section-description">
+            Update the subject, topic,
+            or duration of this session.
+        </p>
+
+
+        <form method="POST">
+
+
+            <div class="edit-field">
+
+
+                <label for="subject">
+                    Subject
+                </label>
+
+
+                <select
+                    id="subject"
+                    name="subject"
+                    required
+                >
+
+
+                    {% if session[2] not in managed_subject_names %}
+
+
+                        <option
+                            value="{{ session[2] }}"
+                            selected
+                        >
+
+                            {{ session[2] }}
+                            (historical)
+
+                        </option>
+
+
+                    {% endif %}
+
+
+                    {% for subject in subjects %}
+
+
+                        <option
+                            value="{{ subject[1] }}"
+
+                            {% if subject[1] == session[2] %}
+
+                                selected
+
+                            {% endif %}
+                        >
+
+                            {{ subject[1] }}
+
+                        </option>
+
+
+                    {% endfor %}
+
+
+                </select>
+
+
+            </div>
+
+
+            <div class="edit-field">
+
+
+                <label for="topic">
+                    Topic
+                </label>
+
+
+                <input
+                    id="topic"
+                    type="text"
+                    name="topic"
+                    value="{{ session[3] }}"
+                    required
+                >
+
+
+            </div>
+
+
+            <div class="edit-field">
+
+
+                <label for="duration">
+                    Duration (minutes)
+                </label>
+
+
+                <input
+                    id="duration"
+                    type="number"
+                    name="duration"
+                    value="{{ session[4] }}"
+                    min="1"
+                    required
+                >
+
+
+            </div>
+
+
+            <div class="edit-actions">
+
+
+                <button type="submit">
+                    Save Changes
+                </button>
+
+
+                <a
+                    class="secondary-link"
+                    href="{{ url_for('home') }}"
+                >
+                    Cancel
+                </a>
+
+
+            </div>
+
+
+        </form>
+
+
+    </section>
+
+
+</div>
+
+
+</body>
+
+</html>

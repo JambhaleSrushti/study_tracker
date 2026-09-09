@@ -1,15 +1,19 @@
 import sqlite3
-import json
 from datetime import date, timedelta
+
 
 DB_FILE = "study_tracker.db"
 
 
+# =========================================================
+# DATABASE INITIALIZATION
+# =========================================================
+
 def initialize_database():
     connection = sqlite3.connect(DB_FILE)
-
     cursor = connection.cursor()
 
+    # Study sessions
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS study_sessions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,6 +24,8 @@ def initialize_database():
         )
     """)
 
+    # Old overall daily goal.
+    # We keep this table because the desktop GUI still uses it.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS settings (
             id INTEGER PRIMARY KEY,
@@ -27,20 +33,151 @@ def initialize_database():
         )
     """)
 
+    # Check whether subjects table already existed.
+    cursor.execute("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+        AND name = 'subjects'
+    """)
+
+    subjects_table_exists = cursor.fetchone() is not None
+
+    # Managed subjects
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS subjects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+            daily_goal_minutes INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+
+    # Only the FIRST time we create the subjects table,
+    # import subjects from historical study sessions.
+    #
+    # This is important because if a user later removes a subject,
+    # we do not want it to return every time the app starts.
+    if not subjects_table_exists:
+        cursor.execute("""
+            INSERT OR IGNORE INTO subjects (
+                name,
+                daily_goal_minutes
+            )
+            SELECT DISTINCT
+                TRIM(subject),
+                0
+            FROM study_sessions
+            WHERE TRIM(subject) != ''
+        """)
+
     connection.commit()
     connection.close()
+
+
+# =========================================================
+# STUDY SESSION DATABASE FUNCTIONS
+# =========================================================
+
+def save_session_to_database(session):
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        INSERT INTO study_sessions (
+            date,
+            subject,
+            topic,
+            duration
+        )
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            session["date"],
+            session["subject"],
+            session["topic"],
+            session["duration"]
+        )
+    )
+
+    connection.commit()
+    connection.close()
+
+
+def load_sessions_from_database():
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            date,
+            subject,
+            topic,
+            duration
+        FROM study_sessions
+        ORDER BY date DESC, id DESC
+    """)
+
+    sessions = cursor.fetchall()
+
+    connection.close()
+
+    return sessions
+
 
 def delete_session_by_id(session_id):
     connection = sqlite3.connect(DB_FILE)
     cursor = connection.cursor()
 
     cursor.execute(
-        "DELETE FROM study_sessions WHERE id = ?",
+        """
+        DELETE FROM study_sessions
+        WHERE id = ?
+        """,
         (session_id,)
     )
 
     connection.commit()
     connection.close()
+
+
+def update_session_by_id(
+    session_id,
+    subject,
+    topic,
+    duration
+):
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE study_sessions
+        SET
+            subject = ?,
+            topic = ?,
+            duration = ?
+        WHERE id = ?
+        """,
+        (
+            subject,
+            topic,
+            duration,
+            session_id
+        )
+    )
+
+    connection.commit()
+    connection.close()
+
+
+# =========================================================
+# OLD OVERALL DAILY GOAL
+# =========================================================
+# Kept because the Tkinter desktop GUI still uses it.
+# The web application will now mainly use subject-wise goals.
+# =========================================================
 
 def load_daily_goal_from_database():
     connection = sqlite3.connect(DB_FILE)
@@ -61,829 +198,89 @@ def load_daily_goal_from_database():
 
     return row[0]
 
+
 def save_daily_goal_to_database(goal):
     connection = sqlite3.connect(DB_FILE)
     cursor = connection.cursor()
 
     cursor.execute(
         """
-        SELECT id
-        FROM settings
-        WHERE id = 1
-        """
-    )
-
-    existing_setting = cursor.fetchone()
-
-    if existing_setting:
-        cursor.execute(
-            """
-            UPDATE settings
-            SET daily_goal_minutes = ?
-            WHERE id = 1
-            """,
-            (goal,)
+        INSERT INTO settings (
+            id,
+            daily_goal_minutes
         )
-    else:
-        cursor.execute(
-            """
-            INSERT INTO settings (id, daily_goal_minutes)
-            VALUES (1, ?)
-            """,
-            (goal,)
-        )
+        VALUES (1, ?)
 
-    connection.commit()
-    connection.close()
-
-def update_session_by_id(session_id, subject, topic, duration):
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        UPDATE study_sessions
-        SET subject = ?, topic = ?, duration = ?
-        WHERE id = ?
+        ON CONFLICT(id)
+        DO UPDATE SET
+            daily_goal_minutes = excluded.daily_goal_minutes
         """,
-        (subject, topic, duration, session_id)
-    )
-
-    connection.commit()
-    connection.close()
-
-def save_session_to_database(session):
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        INSERT INTO study_sessions (date, subject, topic, duration)
-        VALUES (?, ?, ?, ?)
-        """,
-        (
-            session["date"],
-            session["subject"],
-            session["topic"],
-            session["duration"]
-        )
-    )
-
-    connection.commit()
-    connection.close()
-
-def load_sessions_from_database():
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute("""
-        SELECT id, date, subject, topic, duration
-        FROM study_sessions
-        ORDER BY id
-    """)
-
-    rows = cursor.fetchall()
-
-    connection.close()
-
-    return rows
-
-def get_total_study_minutes():
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute("""
-        SELECT SUM(duration)
-        FROM study_sessions
-    """)
-
-    total = cursor.fetchone()[0]
-
-    connection.close()
-
-    if total is None:
-        return 0
-
-    return total
-
-def get_current_streak():
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute("""
-        SELECT DISTINCT date
-        FROM study_sessions
-    """)
-
-    rows = cursor.fetchall()
-
-    connection.close()
-
-    study_dates = {row[0] for row in rows}
-
-    if not study_dates:
-        return 0
-
-    today = date.today()
-    yesterday = today - timedelta(days=1)
-
-    if today.isoformat() in study_dates:
-        current_date = today
-
-    elif yesterday.isoformat() in study_dates:
-        current_date = yesterday
-
-    else:
-        return 0
-
-    streak = 0
-
-    while current_date.isoformat() in study_dates:
-        streak += 1
-        current_date -= timedelta(days=1)
-
-    return streak
-
-def get_weekly_study_minutes():
-    today = date.today()
-
-    week_start = today - timedelta(
-        days=today.weekday()
-    )
-
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        SELECT SUM(duration)
-        FROM study_sessions
-        WHERE date BETWEEN ? AND ?
-        """,
-        (
-            week_start.isoformat(),
-            today.isoformat()
-        )
-    )
-
-    total = cursor.fetchone()[0]
-
-    connection.close()
-
-    if total is None:
-        return 0
-
-    return total
-
-def get_monthly_study_minutes():
-    today = date.today()
-
-    month_start = today.replace(day=1)
-
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        SELECT SUM(duration)
-        FROM study_sessions
-        WHERE date BETWEEN ? AND ?
-        """,
-        (
-            month_start.isoformat(),
-            today.isoformat()
-        )
-    )
-
-    total = cursor.fetchone()[0]
-
-    connection.close()
-
-    if total is None:
-        return 0
-
-    return total
-
-def add_study_session():
-    print("\n===== ADD STUDY SESSION =====")
-
-    subject = input("Subject: ").strip().title()
-    topic = input("Topic: ").strip()
-    while True:
-        duration = input("Duration (minutes): ").strip()
-
-        if duration.isdigit() and int(duration) > 0:
-            duration = int(duration)
-            break
-
-        print("Please enter a valid duration in minutes.")
-
-    session_date = date.today().isoformat()
-
-    session = {
-        "date": session_date,
-        "subject": subject,
-        "topic": topic,
-        "duration": duration
-    }
-
-    save_session_to_database(session)
-
-    print("\nStudy session added successfully!")
-
-
-def view_study_sessions():
-    print("\n===== STUDY SESSIONS =====")
-
-    sessions = load_sessions_from_database()
-
-    if not sessions:
-        print("No study sessions added yet.")
-        return
-
-    for index, session in enumerate(sessions, start=1):
-        print(
-            f"{index}. "
-            f"{session[1]} - "
-            f"{session[2]} - "
-            f"{session[3]} - "
-            f"{session[4]} minutes"
-        )
-        
-
-def delete_study_session():
-    print("\n===== DELETE STUDY SESSION =====")
-
-    sessions = load_sessions_from_database()
-
-    if not sessions:
-        print("No study sessions to delete.")
-        return
-
-    for index, session in enumerate(sessions, start=1):
-        print(
-            f"{index}. "
-            f"{session[1]} - "
-            f"{session[2]} - "
-            f"{session[3]} - "
-            f"{session[4]} minutes"
-        )
-
-    session_number = input(
-        "\nEnter session number to delete: "
-    ).strip()
-
-    if not session_number.isdigit():
-        print("Please enter a valid session number.")
-        return
-
-    session_number = int(session_number)
-
-    if session_number < 1 or session_number > len(sessions):
-        print("Session not found.")
-        return
-
-    selected_session = sessions[session_number - 1]
-    session_id = selected_session[0]
-
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute(
-        "DELETE FROM study_sessions WHERE id = ?",
-        (session_id,)
+        (goal,)
     )
 
     connection.commit()
     connection.close()
 
 
-    print("\nStudy session deleted successfully!")    
+# =========================================================
+# STUDY SESSION SEARCH / FILTER
+# =========================================================
 
-def view_total_study_time():
-    print("\n===== TOTAL STUDY TIME =====")
-
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute("""
-        SELECT SUM(duration)
-        FROM study_sessions
-    """)
-
-    total_minutes = cursor.fetchone()[0]
-
-    connection.close()
-
-    if total_minutes is None:
-        total_minutes = 0
-
-    print(f"Total study time: {total_minutes} minutes")
-
-
-def view_study_time_by_subject():
-    print("\n===== STUDY TIME BY SUBJECT =====")
-
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute("""
-        SELECT subject, SUM(duration)
-        FROM study_sessions
-        GROUP BY subject
-        ORDER BY subject
-    """)
-
-    results = cursor.fetchall()
-
-    connection.close()
-
-    if not results:
-        print("No study sessions added yet.")
-        return
-
-    for subject, total_minutes in results:
-        print(f"{subject}: {total_minutes} minutes")
-
-def view_daily_goal_progress():
-    print("\n===== DAILY STUDY GOAL =====")
-
-    daily_goal_minutes = load_daily_goal_from_database()
-
-    if daily_goal_minutes is None:
-        print("Daily study goal has not been set yet.")
-        return
-
-    today = date.today().isoformat()
-
+def get_sessions_by_subject(subject):
     connection = sqlite3.connect(DB_FILE)
     cursor = connection.cursor()
 
     cursor.execute(
         """
-        SELECT SUM(duration)
+        SELECT
+            id,
+            date,
+            subject,
+            topic,
+            duration
         FROM study_sessions
-        WHERE date = ?
+        WHERE subject = ? COLLATE NOCASE
+        ORDER BY date DESC, id DESC
         """,
-        (today,)
+        (subject,)
     )
 
-    today_minutes = cursor.fetchone()[0]
+    sessions = cursor.fetchall()
 
     connection.close()
 
-    if today_minutes is None:
-        today_minutes = 0
+    return sessions
 
-    progress = (today_minutes / daily_goal_minutes) * 100
 
-    print(f"Daily goal: {daily_goal_minutes} minutes")
-    print(f"Today's study: {today_minutes} minutes")
-    print(f"Progress: {progress:.0f}%")
-
-    if today_minutes >= daily_goal_minutes:
-        print("Daily goal completed!")
-    else:
-        remaining = daily_goal_minutes - today_minutes
-        print(f"{remaining} minutes remaining.")
-        
-def view_study_streak():
-    print("\n===== STUDY STREAK =====")
-
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute("""
-        SELECT DISTINCT date
-        FROM study_sessions
-        ORDER BY date DESC
-    """)
-
-    rows = cursor.fetchall()
-    connection.close()
-
-    study_dates = set()
-
-    for row in rows:
-        study_dates.add(row[0])
-
-    if not study_dates:
-        print("Current streak: 0 days")
-        return
-
-    today = date.today()
-    yesterday = today - timedelta(days=1)
-
-    if today.isoformat() in study_dates:
-        current_date = today
-    elif yesterday.isoformat() in study_dates:
-        current_date = yesterday
-    else:
-        print("Current streak: 0 days")
-        return
-
-    streak = 0
-
-    while current_date.isoformat() in study_dates:
-        streak += 1
-        current_date -= timedelta(days=1)
-
-    if streak == 1:
-        print("Current streak: 1 day")
-    else:
-        print(f"Current streak: {streak} days")
-
-def filter_sessions_by_subject():
-    print("\n===== FILTER BY SUBJECT =====")
-
-    subject_to_find = input("Enter subject: ").strip().title()
-
+def get_sessions_by_topic(keyword):
     connection = sqlite3.connect(DB_FILE)
     cursor = connection.cursor()
 
     cursor.execute(
         """
-        SELECT id, date, subject, topic, duration
-        FROM study_sessions
-        WHERE subject = ?
-        ORDER BY date
-        """,
-        (subject_to_find,)
-    )
-
-    matching_sessions = cursor.fetchall()
-
-    connection.close()
-
-    if not matching_sessions:
-        print(f"No study sessions found for {subject_to_find}.")
-        return
-
-    for index, session in enumerate(matching_sessions, start=1):
-        print(
-            f"{index}. "
-            f"{session[1]} - "
-            f"{session[2]} - "
-            f"{session[3]} - "
-            f"{session[4]} minutes"
-        )
-
-def filter_sessions_by_date():
-    print("\n===== FILTER BY DATE =====")
-
-    date_to_find = input("Enter date (YYYY-MM-DD): ").strip()
-
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        SELECT id, date, subject, topic, duration
-        FROM study_sessions
-        WHERE date = ?
-        ORDER BY id
-        """,
-        (date_to_find,)
-    )
-
-    matching_sessions = cursor.fetchall()
-
-    connection.close()
-
-    if not matching_sessions:
-        print(f"No study sessions found for {date_to_find}.")
-        return
-
-    for index, session in enumerate(matching_sessions, start=1):
-        print(
-            f"{index}. "
-            f"{session[1]} - "
-            f"{session[2]} - "
-            f"{session[3]} - "
-            f"{session[4]} minutes"
-        )
-
-def view_sorted_sessions():
-    print("\n===== SORT STUDY SESSIONS =====")
-
-    print("1. Oldest first")
-    print("2. Newest first")
-
-    choice = input("Choose sort order: ").strip()
-
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    if choice == "1":
-        cursor.execute("""
-            SELECT id, date, subject, topic, duration
-            FROM study_sessions
-            ORDER BY date ASC, id ASC
-        """)
-
-    elif choice == "2":
-        cursor.execute("""
-            SELECT id, date, subject, topic, duration
-            FROM study_sessions
-            ORDER BY date DESC, id DESC
-        """)
-
-    else:
-        print("Invalid option.")
-        connection.close()
-        return
-
-    sorted_sessions = cursor.fetchall()
-
-    connection.close()
-
-    if not sorted_sessions:
-        print("No study sessions added yet.")
-        return
-
-    print("\n===== SORTED STUDY SESSIONS =====")
-
-    for index, session in enumerate(sorted_sessions, start=1):
-        print(
-            f"{index}. "
-            f"{session[1]} - "
-            f"{session[2]} - "
-            f"{session[3]} - "
-            f"{session[4]} minutes"
-        )
-
-def search_sessions_by_topic():
-    print("\n===== SEARCH BY TOPIC =====")
-
-    topic_to_find = input("Enter topic keyword: ").strip()
-
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        SELECT id, date, subject, topic, duration
+        SELECT
+            id,
+            date,
+            subject,
+            topic,
+            duration
         FROM study_sessions
         WHERE topic LIKE ?
-        ORDER BY date
+        ORDER BY date DESC, id DESC
         """,
-        (f"%{topic_to_find}%",)
+        (f"%{keyword}%",)
     )
 
-    matching_sessions = cursor.fetchall()
+    sessions = cursor.fetchall()
 
     connection.close()
 
-    if not matching_sessions:
-        print(f"No study sessions found matching '{topic_to_find}'.")
-        return
-
-    for index, session in enumerate(matching_sessions, start=1):
-        print(
-            f"{index}. "
-            f"{session[1]} - "
-            f"{session[2]} - "
-            f"{session[3]} - "
-            f"{session[4]} minutes"
-        )
-
-def view_weekly_statistics():
-    print("\n===== WEEKLY STATISTICS =====")
-
-    today = date.today()
-    week_start = today - timedelta(days=today.weekday())
-
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        SELECT COUNT(*), COUNT(DISTINCT date), SUM(duration)
-        FROM study_sessions
-        WHERE date BETWEEN ? AND ?
-        """,
-        (
-            week_start.isoformat(),
-            today.isoformat()
-        )
-    )
-
-    result = cursor.fetchone()
-    connection.close()
-
-    session_count = result[0]
-    study_days = result[1]
-    total_minutes = result[2]
-
-    if total_minutes is None:
-        total_minutes = 0
-
-    print(f"Week: {week_start} to {today}")
-    print(f"Study sessions: {session_count}")
-    print(f"Study days: {study_days}")
-    print(f"Total study time: {total_minutes} minutes")
-
-def view_monthly_statistics():
-    print("\n===== MONTHLY STATISTICS =====")
-
-    today = date.today()
-
-    month_start = today.replace(day=1)
-
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        SELECT COUNT(*), COUNT(DISTINCT date), SUM(duration)
-        FROM study_sessions
-        WHERE date BETWEEN ? AND ?
-        """,
-        (
-            month_start.isoformat(),
-            today.isoformat()
-        )
-    )
-
-    result = cursor.fetchone()
-    connection.close()
-
-    session_count = result[0]
-    study_days = result[1]
-    total_minutes = result[2]
-
-    if total_minutes is None:
-        total_minutes = 0
-
-    print(f"Month: {today.strftime('%B %Y')}")
-    print(f"Study sessions: {session_count}")
-    print(f"Study days: {study_days}")
-    print(f"Total study time: {total_minutes} minutes")
-
-def edit_study_session():
-    print("\n===== EDIT STUDY SESSION =====")
-
-    sessions = load_sessions_from_database()
-
-    if not sessions:
-        print("No study sessions to edit.")
-        return
-
-    for index, session in enumerate(sessions, start=1):
-        print(
-            f"{index}. "
-            f"{session[1]} - "
-            f"{session[2]} - "
-            f"{session[3]} - "
-            f"{session[4]} minutes"
-        )
-
-    session_number = input(
-        "\nEnter session number to edit: "
-    ).strip()
-
-    if not session_number.isdigit():
-        print("Please enter a valid session number.")
-        return
-
-    session_number = int(session_number)
-
-    if session_number < 1 or session_number > len(sessions):
-        print("Session not found.")
-        return
-
-    selected_session = sessions[session_number - 1]
-    session_id = selected_session[0]
-
-    print("\nWhat would you like to edit?")
-    print("1. Subject")
-    print("2. Topic")
-    print("3. Duration")
-
-    choice = input("Choose an option: ").strip()
-
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-
-    if choice == "1":
-        new_subject = input("Enter new subject: ").strip().title()
-
-        if not new_subject:
-            print("Subject cannot be empty.")
-            connection.close()
-            return
-
-        cursor.execute(
-            """
-            UPDATE study_sessions
-            SET subject = ?
-            WHERE id = ?
-            """,
-            (new_subject, session_id)
-        )
-
-    elif choice == "2":
-        new_topic = input("Enter new topic: ").strip()
-
-        if not new_topic:
-            print("Topic cannot be empty.")
-            connection.close()
-            return
-
-        cursor.execute(
-            """
-            UPDATE study_sessions
-            SET topic = ?
-            WHERE id = ?
-            """,
-            (new_topic, session_id)
-        )
-
-    elif choice == "3":
-        while True:
-            new_duration = input(
-                "Enter new duration (minutes): "
-            ).strip()
-
-            if new_duration.isdigit() and int(new_duration) > 0:
-                new_duration = int(new_duration)
-                break
-
-            print("Please enter a valid duration in minutes.")
-
-        cursor.execute(
-            """
-            UPDATE study_sessions
-            SET duration = ?
-            WHERE id = ?
-            """,
-            (new_duration, session_id)
-        )
-
-    else:
-        print("Invalid option.")
-        connection.close()
-        return
-
-    connection.commit()
-    connection.close()
+    return sessions
 
 
-    print("\nStudy session updated successfully!")
-
-def set_daily_goal():
-    global daily_goal_minutes
-
-    print("\n===== SET DAILY STUDY GOAL =====")
-
-    while True:
-        goal = input("Enter daily goal in minutes: ").strip()
-
-        if goal.isdigit() and int(goal) > 0:
-            daily_goal_minutes = int(goal)
-            save_daily_goal(daily_goal_minutes)
-
-            print(
-                f"\nDaily study goal set to "
-                f"{daily_goal_minutes} minutes."
-            )
-            return
-
-        print("Please enter a valid number of minutes.")
-
-def view_database_sessions():
-    print("\n===== SQLITE STUDY SESSIONS =====")
-
-    sessions = load_sessions_from_database()
-
-    if not sessions:
-        print("No study sessions found in the database.")
-        return
-
-    for session in sessions:
-        print(
-            f"{session[0]}. "
-            f"{session[1]} - "
-            f"{session[2]} - "
-            f"{session[3]} - "
-            f"{session[4]} minutes"
-        )
-
-def set_daily_goal():
-    print("\n===== SET DAILY STUDY GOAL =====")
-
-    while True:
-        goal = input("Enter daily goal in minutes: ").strip()
-
-        if goal.isdigit() and int(goal) > 0:
-            goal = int(goal)
-
-            save_daily_goal_to_database(goal)
-
-            print(f"\nDaily study goal set to {goal} minutes.")
-            return
-
-        print("Please enter a valid number of minutes.")
+# =========================================================
+# STATISTICS
+# =========================================================
 
 def get_today_study_minutes():
     today = date.today().isoformat()
@@ -909,118 +306,325 @@ def get_today_study_minutes():
 
     return total
 
-def get_sessions_by_subject(subject):
+
+def get_total_study_minutes():
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT SUM(duration)
+        FROM study_sessions
+    """)
+
+    total = cursor.fetchone()[0]
+
+    connection.close()
+
+    if total is None:
+        return 0
+
+    return total
+
+
+def get_current_streak():
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT DISTINCT date
+        FROM study_sessions
+    """)
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    study_dates = {
+        row[0]
+        for row in rows
+    }
+
+    if not study_dates:
+        return 0
+
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+
+    if today.isoformat() in study_dates:
+        current_date = today
+
+    elif yesterday.isoformat() in study_dates:
+        current_date = yesterday
+
+    else:
+        return 0
+
+    streak = 0
+
+    while current_date.isoformat() in study_dates:
+        streak += 1
+        current_date -= timedelta(days=1)
+
+    return streak
+
+
+def get_weekly_study_minutes():
+    today = date.today()
+
+    week_start = (
+        today
+        - timedelta(days=today.weekday())
+    )
+
     connection = sqlite3.connect(DB_FILE)
     cursor = connection.cursor()
 
     cursor.execute(
         """
-        SELECT id, date, subject, topic, duration
+        SELECT SUM(duration)
         FROM study_sessions
-        WHERE subject = ?
-        ORDER BY date
+        WHERE date BETWEEN ? AND ?
         """,
-        (subject,)
+        (
+            week_start.isoformat(),
+            today.isoformat()
+        )
     )
 
-    sessions = cursor.fetchall()
+    total = cursor.fetchone()[0]
 
     connection.close()
 
-    return sessions
+    if total is None:
+        return 0
 
-def get_sessions_by_topic(keyword):
+    return total
+
+
+def get_monthly_study_minutes():
+    today = date.today()
+
+    month_start = today.replace(
+        day=1
+    )
+
     connection = sqlite3.connect(DB_FILE)
     cursor = connection.cursor()
 
     cursor.execute(
         """
-        SELECT id, date, subject, topic, duration
+        SELECT SUM(duration)
         FROM study_sessions
-        WHERE topic LIKE ?
-        ORDER BY date
+        WHERE date BETWEEN ? AND ?
         """,
-        (f"%{keyword}%",)
+        (
+            month_start.isoformat(),
+            today.isoformat()
+        )
     )
 
-    sessions = cursor.fetchall()
+    total = cursor.fetchone()[0]
 
     connection.close()
 
-    return sessions
+    if total is None:
+        return 0
+
+    return total
+
+
+# =========================================================
+# MANAGED SUBJECTS
+# =========================================================
+
+def get_subjects():
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            name,
+            daily_goal_minutes
+        FROM subjects
+        ORDER BY name
+    """)
+
+    subjects = cursor.fetchall()
+
+    connection.close()
+
+    return subjects
+
+
+def add_subject(name):
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        INSERT OR IGNORE INTO subjects (
+            name,
+            daily_goal_minutes
+        )
+        VALUES (?, 0)
+        """,
+        (name,)
+    )
+
+    connection.commit()
+    connection.close()
+
+
+def update_subject_goal(
+    subject_id,
+    daily_goal_minutes
+):
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE subjects
+        SET daily_goal_minutes = ?
+        WHERE id = ?
+        """,
+        (
+            daily_goal_minutes,
+            subject_id
+        )
+    )
+
+    connection.commit()
+    connection.close()
+
+
+def delete_subject(subject_id):
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        DELETE FROM subjects
+        WHERE id = ?
+        """,
+        (subject_id,)
+    )
+
+    connection.commit()
+    connection.close()
+
+
+# =========================================================
+# SIMPLE COMMAND-LINE VERSION
+# =========================================================
+
+def display_sessions():
+    sessions = load_sessions_from_database()
+
+    if not sessions:
+        print("\nNo study sessions found.")
+        return
+
+    print("\nStudy Sessions")
+    print("-" * 75)
+
+    for session in sessions:
+        print(
+            f"ID: {session[0]} | "
+            f"Date: {session[1]} | "
+            f"Subject: {session[2]} | "
+            f"Topic: {session[3]} | "
+            f"Duration: {session[4]} min"
+        )
+
+
+def cli_add_session():
+    subject = input(
+        "Subject: "
+    ).strip().title()
+
+    topic = input(
+        "Topic: "
+    ).strip()
+
+    duration = input(
+        "Duration in minutes: "
+    ).strip()
+
+    if (
+        not subject
+        or not topic
+        or not duration.isdigit()
+        or int(duration) <= 0
+    ):
+        print("Invalid study session.")
+        return
+
+    session = {
+        "date": date.today().isoformat(),
+        "subject": subject,
+        "topic": topic,
+        "duration": int(duration)
+    }
+
+    save_session_to_database(session)
+
+    print("Study session added.")
+
 
 def main():
     while True:
+        print("\nStudy Tracker")
         print("1. Add study session")
         print("2. View study sessions")
-        print("3. Delete study session")
-        print("4. View total study time")
-        print("5. View study time by subject")
-        print("6. View daily goal progress")
-        print("7. View study streak")
-        print("8. Filter sessions by subject")
-        print("9. Filter sessions by date")
-        print("10. Sort study sessions")
-        print("11. Search sessions by topic")
-        print("12. View weekly statistics")
-        print("13. View monthly statistics")
-        print("14. Edit study session")
-        print("15. Set daily study goal")
-        print("16. Exit")
+        print("3. Show statistics")
+        print("4. Exit")
 
-        choice = input("\nChoose an option: ").strip()
+        choice = input(
+            "Choose an option: "
+        ).strip()
 
         if choice == "1":
-            add_study_session()
+            cli_add_session()
 
         elif choice == "2":
-            view_study_sessions()
+            display_sessions()
 
         elif choice == "3":
-            delete_study_session()
+            print(
+                "\nTotal:",
+                get_total_study_minutes(),
+                "minutes"
+            )
+
+            print(
+                "This week:",
+                get_weekly_study_minutes(),
+                "minutes"
+            )
+
+            print(
+                "This month:",
+                get_monthly_study_minutes(),
+                "minutes"
+            )
+
+            print(
+                "Current streak:",
+                get_current_streak(),
+                "days"
+            )
 
         elif choice == "4":
-            view_total_study_time()
-
-        elif choice == "5":
-            view_study_time_by_subject()
-
-        elif choice == "6":
-            view_daily_goal_progress()
-
-        elif choice == "7":
-            view_study_streak()
-
-        elif choice == "8":
-            filter_sessions_by_subject()
-
-        elif choice == "9":
-            filter_sessions_by_date()
-
-        elif choice == "10":
-            view_sorted_sessions()
-
-        elif choice == "11":
-            search_sessions_by_topic()
-
-        elif choice == "12":
-            view_weekly_statistics()
-
-        elif choice == "13":
-            view_monthly_statistics()
-
-        elif choice == "14":
-            edit_study_session()
-
-        elif choice == "15":
-            set_daily_goal()
-
-        elif choice == "16":
-            print("\nGoodbye!")
-            break      
+            print("Goodbye!")
+            break
 
         else:
-            print("\nInvalid option. Please choose 1 to 16.")
+            print(
+                "Please choose a valid option."
+            )
+
 
 if __name__ == "__main__":
     initialize_database()
